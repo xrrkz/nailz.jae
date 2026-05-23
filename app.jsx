@@ -52,6 +52,7 @@ function App() {
             {route === 'gallery'  && <GalleryPage  go={go}/>}
             {route === 'services' && <ServicesPage go={go}/>}
             {route === 'contact'  && <ContactPage  go={go}/>}
+            {route === 'appts'    && <MyAppointmentsPage go={go}/>}
             {route === 'book'     && <BookingFlow initial={bookingInitial} onExit={exitBooking}/>}
             {route === 'admin'    && <AdminPanel onExit={() => go('home')}/>}
           </div>
@@ -109,6 +110,7 @@ function parseHash() {
   if (h.startsWith('gallery')) return 'gallery';
   if (h.startsWith('services')) return 'services';
   if (h.startsWith('contact')) return 'contact';
+  if (h.startsWith('appts') || h.startsWith('my-appointments')) return 'appts';
   return 'home';
 }
 

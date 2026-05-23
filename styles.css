@@ -921,7 +921,29 @@ button.card:active, a.card:active { transform: scale(0.985); transition-duration
 }
 .badge-pending { background: rgba(201, 142, 142, 0.18); color: var(--rose-deep); }
 .badge-confirmed { background: rgba(99, 138, 95, 0.16); color: #4a7048; }
+.badge-denied { background: rgba(42, 31, 28, 0.06); color: var(--ink-mute); }
 .badge-closed { background: rgba(42, 31, 28, 0.06); color: var(--ink-mute); }
+
+/* admin: quick contact buttons on appointment card */
+.contact-row {
+  display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap;
+}
+.contact-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-2);
+  background: var(--bg-soft);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.contact-btn:hover { background: rgba(201, 142, 142, 0.10); border-color: var(--rose); }
+.contact-btn svg { width: 14px; height: 14px; }
 
 .copy-btn {
   display: inline-flex; align-items: center; gap: 6px;

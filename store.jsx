@@ -342,6 +342,28 @@ function _uuid() {
   return 'b-' + Date.now() + '-' + Math.random().toString(16).slice(2);
 }
 
+function _sendBookingEmail(kind, booking) {
+  if (!__remote.enabled || !booking?.email) return;
+  const sv = __state.services.find(s => s.id === booking.serviceId);
+  const payload = {
+    kind,
+    booking: {
+      name:          booking.name,
+      email:         booking.email,
+      service_name:  booking.serviceName || sv?.name || 'Your appointment',
+      service_price: booking.servicePrice ?? sv?.price ?? null,
+      date:          booking.date,
+      time:          booking.time,
+      payment:       booking.payment || '',
+      note:          booking.note || '',
+      deposit_amount: __state.settings?.depositAmount ?? 15,
+    },
+  };
+  window.sb.functions.invoke('send-booking-email', { body: payload })
+    .then(({ error }) => { if (error) console.warn('[store] email send failed', error); })
+    .catch(err => console.warn('[store] email send threw', err));
+}
+
 function addBooking(b) {
   const id = _uuid();
   const booking = { ...b, id, status: 'pending', createdAt: Date.now() };
@@ -349,12 +371,17 @@ function addBooking(b) {
   if (__remote.enabled) {
     window.sb.from('bookings').insert(bookingToRow(booking)).then(({ error }) => {
       if (error) console.warn('[store] booking insert failed', error);
+      else _sendBookingEmail('received', booking);
     });
   }
   return booking;
 }
 function updateBooking(id, patch) {
-  mutate(s => ({ ...s, bookings: s.bookings.map(b => b.id === id ? { ...b, ...patch } : b) }));
+  let prev;
+  mutate(s => {
+    prev = s.bookings.find(b => b.id === id);
+    return { ...s, bookings: s.bookings.map(b => b.id === id ? { ...b, ...patch } : b) };
+  });
   if (__remote.enabled) {
     const row = {};
     if (patch.status         !== undefined) row.status          = patch.status;
@@ -363,6 +390,9 @@ function updateBooking(id, patch) {
     if (Object.keys(row).length === 0) return;
     window.sb.from('bookings').update(row).eq('id', id).then(({ error }) => {
       if (error) console.warn('[store] booking update failed', error);
+      else if (patch.status === 'confirmed' && prev && prev.status !== 'confirmed') {
+        _sendBookingEmail('confirmed', { ...prev, ...patch });
+      }
     });
   }
 }
@@ -398,6 +428,18 @@ function bookedTimesFor(dateKey) {
   return set;
 }
 
+async function lookupBookingsByContact(contact) {
+  if (!__remote.enabled) return [];
+  const clean = (contact || '').trim();
+  if (!clean) return [];
+  const { data, error } = await window.sb.rpc('bookings_by_contact', { p_contact: clean });
+  if (error) {
+    console.warn('[store] lookup failed', error);
+    throw error;
+  }
+  return (data || []).map(rowToBooking);
+}
+
 // expose globals
 Object.assign(window, {
   useStore, mutate,
@@ -406,5 +448,6 @@ Object.assign(window, {
   addBooking, updateBooking, removeBooking,
   updateHandle, updateSettings,
   bookedTimesFor,
+  lookupBookingsByContact,
   ymd, parseYmd, fmtDateLong, fmtDateShort,
 });
