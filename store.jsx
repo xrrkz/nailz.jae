@@ -35,10 +35,13 @@ const seedGallery = {
     { id: 'set-3', caption: '', src: 'assets/gallery/set-03.jpeg' },
     { id: 'set-4', caption: '', src: 'assets/gallery/set-04.jpeg' },
     { id: 'set-5', caption: '', src: 'assets/gallery/set-05.jpeg' },
-    { id: 'set-6', caption: '', src: 'assets/gallery/set-06.jpeg' },
-    { id: 'set-7', caption: '', src: '' },
-    { id: 'set-8', caption: '', src: '' },
-    { id: 'set-9', caption: '', src: '' },
+    { id: 'set-6',  caption: '', src: 'assets/gallery/set-06.jpeg' },
+    { id: 'set-7',  caption: '', src: 'assets/gallery/set-07.jpeg' },
+    { id: 'set-8',  caption: '', src: 'assets/gallery/set-08.jpeg' },
+    { id: 'set-9',  caption: '', src: 'assets/gallery/set-09.jpeg' },
+    { id: 'set-10', caption: '', src: 'assets/gallery/set-10.jpeg' },
+    { id: 'set-11', caption: '', src: 'assets/gallery/set-11.jpeg' },
+    { id: 'set-12', caption: '', src: 'assets/gallery/set-12.jpeg' },
   ],
   retention: Array.from({ length: 4 }, (_, i) => ({ id: `ret-${i+1}`, caption: '', src: '' })),
 };
@@ -114,6 +117,14 @@ function loadStore() {
       parsed.settings = parsed.settings || {};
       if (!parsed.settings.adminUser) parsed.settings.adminUser = 'jae';
       if (!parsed.settings.adminPass) parsed.settings.adminPass = 'nailz';
+      // gallery migration — fill any empty seed slots from the bundled seed
+      parsed.gallery = parsed.gallery || { sets: [], retention: [] };
+      parsed.gallery.sets = parsed.gallery.sets || [];
+      for (const seed of seedGallery.sets) {
+        const existing = parsed.gallery.sets.find(g => g.id === seed.id);
+        if (!existing) parsed.gallery.sets.push({ ...seed });
+        else if (!existing.src && seed.src) existing.src = seed.src;
+      }
       return parsed;
     }
   } catch (e) { /* fall through */ }
