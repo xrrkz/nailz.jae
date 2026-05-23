@@ -55,7 +55,7 @@ function buildEmail(kind: string, b: Record<string, unknown>) {
 
   const confirmed = kind === "confirmed";
   const subject = confirmed
-    ? `✶ You're confirmed for ${date} — nailz.jae`
+    ? `You're confirmed for ${date} — nailz.jae`
     : `We got your booking — nailz.jae`;
 
   const headline = confirmed ? "You're confirmed!" : "Booking received";
