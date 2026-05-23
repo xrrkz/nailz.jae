@@ -101,10 +101,17 @@ input, textarea, select { font: inherit; color: inherit; }
 }
 .scroll::-webkit-scrollbar { display: none; }
 
-/* status-bar pad: iOS frame already includes status bar, but our app paints
-   under it via absolute positioning, so we add inset for safety */
+/* status-bar pad: inside the fake iPhone bezel the prototype reserves
+   54px for the simulated status bar. On a real phone (.ios-live) we
+   honor the actual safe-area inset so content clears the notch /
+   dynamic island. */
 .safe-top { padding-top: 54px; }
 .safe-bottom { padding-bottom: 96px; }
+
+.ios-live .safe-top    { padding-top: max(env(safe-area-inset-top), 18px); }
+.ios-live .safe-bottom { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+.ios-live .tabbar      { bottom: max(env(safe-area-inset-bottom), 14px); }
+.ios-live .cta-footer  { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
 
 /* ─────────────────────────────────────────────────────────
    logo wordmark

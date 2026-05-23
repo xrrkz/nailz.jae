@@ -2,17 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>nailz.jae — book your set</title>
+<meta name="description" content="Book your acrylic set, gel overlay, or manicure with Jaelyn Ervin — nailz.jae."/>
+
+<!-- iOS PWA / home-screen polish -->
+<meta name="theme-color" content="#f3eadb"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="nailz.jae"/>
+<meta name="format-detection" content="telephone=no"/>
 
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=DM+Serif+Display:ital@0;1&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Italiana&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 
 <link rel="stylesheet" href="styles.css"/>
+<link rel="apple-touch-icon" href="assets/gallery/set-01.jpeg"/>
+<link rel="icon" href="assets/gallery/set-01.jpeg"/>
 
 <style>
+  html, body { height: 100%; }
   body {
+    margin: 0;
     background: #07050b;
     display: flex; align-items: center; justify-content: center;
     min-height: 100vh;
@@ -20,17 +32,32 @@
     background-image:
       radial-gradient(800px 600px at 20% 20%, rgba(232, 196, 196, 0.06), transparent 60%),
       radial-gradient(900px 700px at 80% 90%, rgba(240, 229, 219, 0.04), transparent 60%);
+    -webkit-tap-highlight-color: transparent;
   }
   #root { display: flex; align-items: center; justify-content: center; }
+
+  /* On a real phone the prototype's iPhone bezel + dark stage would
+     be visible inside the actual iPhone. Drop them and let the cream
+     app fill the entire viewport. */
+  @media (max-width: 480px) {
+    body {
+      background: #f3eadb;
+      background-image: none;
+      padding: 0;
+      min-height: 100dvh;
+      display: block;
+    }
+    #root { display: block; min-height: 100dvh; }
+  }
 </style>
 </head>
 <body>
 
 <div id="root"></div>
 
-<!-- React + Babel pinned -->
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<!-- React (production) + Babel standalone for in-browser JSX -->
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
 <!-- image-slot web component (drag-drop) -->

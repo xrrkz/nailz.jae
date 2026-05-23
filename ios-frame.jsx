@@ -186,11 +186,48 @@ function IOSList({ header, children, dark = false }) {
 
 // ─────────────────────────────────────────────────────────────
 // Device frame
+//
+// On desktop / tablet we render the prototype inside a fake iPhone
+// bezel so the site previews nicely. On a real phone we drop the
+// frame entirely and let the app fill the viewport (no double bezel,
+// no fake status bar duplicating the real one).
 // ─────────────────────────────────────────────────────────────
+function useIsMobileViewport(maxWidth = 480) {
+  const [m, setM] = React.useState(() =>
+    typeof window !== 'undefined' && window.matchMedia(`(max-width: ${maxWidth}px)`).matches
+  );
+  React.useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${maxWidth}px)`);
+    const on = () => setM(mq.matches);
+    mq.addEventListener ? mq.addEventListener('change', on) : mq.addListener(on);
+    return () => mq.removeEventListener ? mq.removeEventListener('change', on) : mq.removeListener(on);
+  }, [maxWidth]);
+  return m;
+}
+
 function IOSDevice({
   children, width = 402, height = 874, dark = false,
   title, keyboard = false,
 }) {
+  const isMobile = useIsMobileViewport();
+
+  if (isMobile) {
+    // Production layout on a real phone: fill the viewport, no fake
+    // chrome. Safe-area insets are applied inside the app via the
+    // .safe-top / .safe-bottom / .tabbar rules in styles.css.
+    return (
+      <div className="ios-live" style={{
+        width: '100%', height: '100dvh', minHeight: '100svh',
+        position: 'relative', background: 'var(--bg)',
+        fontFamily: '-apple-system, system-ui, sans-serif',
+        WebkitFontSmoothing: 'antialiased',
+        overflow: 'hidden',
+      }}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div style={{
       width, height, borderRadius: 48, overflow: 'hidden',
