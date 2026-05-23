@@ -114,9 +114,6 @@ function BookingFlow({ initial, onExit }) {
     </>
   );
 }
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────
 // Step 1: Service
