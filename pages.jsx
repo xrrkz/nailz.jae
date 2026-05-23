@@ -1,6 +1,54 @@
 // pages.jsx — Home, Gallery, Services, Contact
 
 // ─────────────────────────────────────────────────────────────
+// GalleryCycle — animated carousel that crossfades through portfolio
+// ─────────────────────────────────────────────────────────────
+function GalleryCycle({ items, onTap }) {
+  const [idx, setIdx] = React.useState(0);
+  const count = items.length;
+  const reduce = typeof window !== 'undefined' && window.matchMedia
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  React.useEffect(() => {
+    if (count < 2 || reduce) return;
+    const id = setInterval(() => setIdx(i => (i + 1) % count), 2800);
+    return () => clearInterval(id);
+  }, [count, reduce]);
+
+  if (count === 0) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      className="gallery-cycle"
+      aria-label="View gallery"
+    >
+      <div className="gallery-cycle-stage">
+        {items.map((g, i) => (
+          <img
+            key={g.id}
+            src={g.src}
+            alt=""
+            className={'gallery-cycle-img' + (i === idx ? ' is-active' : '')}
+            loading={i === 0 ? 'eager' : 'lazy'}
+            decoding="async"
+            fetchpriority={i === 0 ? 'high' : 'auto'}
+          />
+        ))}
+      </div>
+      {count > 1 && (
+        <div className="gallery-cycle-dots" aria-hidden="true">
+          {items.map((_, i) => (
+            <span key={i} className={'gcd' + (i === idx ? ' is-on' : '')}/>
+          ))}
+        </div>
+      )}
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // Home
 // ─────────────────────────────────────────────────────────────
 function HomePage({ go }) {
@@ -77,25 +125,7 @@ function HomePage({ go }) {
             See all
           </button>
         </div>
-        <div className="gallery-grid">
-          {state.gallery.sets.slice(0, 4).filter(g => g.src).map((g, i) => (
-            <button
-              key={g.id}
-              onClick={() => go('gallery')}
-              className="gallery-tile"
-              style={{ background: 'transparent', border: 0, padding: 0, cursor: 'pointer' }}
-              aria-label="View gallery"
-            >
-              <img
-                src={g.src}
-                alt=""
-                loading={i === 0 ? 'eager' : 'lazy'}
-                decoding="async"
-                fetchpriority={i === 0 ? 'high' : 'auto'}
-              />
-            </button>
-          ))}
-        </div>
+        <GalleryCycle items={state.gallery.sets.filter(g => g.src)} onTap={() => go('gallery')}/>
       </div>
 
       {/* Services preview */}
