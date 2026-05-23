@@ -82,6 +82,70 @@ $$;
 grant execute on function public.public_booked_slots() to anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────
+-- bookings_by_contact(p_contact)  — let a visitor look up the
+-- appointments tied to their email OR phone number without
+-- exposing anyone else's. The RLS policy hides full rows from
+-- anon, so this SECURITY DEFINER function is the controlled
+-- escape hatch. Phone numbers are matched on digits only so
+-- formatting differences don't break the lookup.
+-- ─────────────────────────────────────────────────────────────
+create or replace function public.bookings_by_contact(p_contact text)
+returns table (
+  id            uuid,
+  service_id    text,
+  service_name  text,
+  service_price numeric,
+  date          date,
+  "time"        text,
+  name          text,
+  payment       text,
+  note          text,
+  status        text,
+  created_at    timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  with q as (
+    select
+      lower(trim(p_contact))                      as email_q,
+      regexp_replace(coalesce(p_contact, ''), '\D', '', 'g') as digits_q
+  )
+  select b.id, b.service_id, b.service_name, b.service_price, b.date, b.time,
+         b.name, b.payment, b.note, b.status, b.created_at
+  from public.bookings b, q
+  where (q.email_q <> '' and lower(trim(b.email)) = q.email_q)
+     or (length(q.digits_q) >= 7
+         and regexp_replace(coalesce(b.phone, ''), '\D', '', 'g') = q.digits_q)
+  order by b.date desc, b.time desc;
+$$;
+grant execute on function public.bookings_by_contact(text) to anon, authenticated;
+
+-- back-compat alias for any client still calling the old name
+create or replace function public.bookings_by_email(p_email text)
+returns table (
+  id            uuid,
+  service_id    text,
+  service_name  text,
+  service_price numeric,
+  date          date,
+  "time"        text,
+  name          text,
+  payment       text,
+  note          text,
+  status        text,
+  created_at    timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select * from public.bookings_by_contact(p_email);
+$$;
+grant execute on function public.bookings_by_email(text) to anon, authenticated;
+
+-- ─────────────────────────────────────────────────────────────
 -- Seed the next 28 days of availability (Mon–Sat open) if empty
 -- ─────────────────────────────────────────────────────────────
 insert into public.availability (date, open, slots)

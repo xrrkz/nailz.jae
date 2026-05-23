@@ -194,6 +194,10 @@ function AppointmentCard({ booking, state }) {
     booking.status === 'denied'    ? 'badge-closed'    :
                                      'badge-pending';
 
+  const phoneDigits = (booking.phone || '').replace(/[^0-9+]/g, '');
+  const apptText = `Hi ${booking.name?.split(' ')[0] || 'there'} — about your ${sv?.name || 'appointment'} on ${fmtDateLong(parseYmd(booking.date))} at ${booking.time}:`;
+  const igHandle = (booking.social || '').replace(/^@/, '').trim();
+
   return (
     <div className="admin-card">
       <div className="row-between">
@@ -208,11 +212,47 @@ function AppointmentCard({ booking, state }) {
 
       <div className="stack-tight" style={{ fontSize: 13 }}>
         <div className="row-between"><span className="body-mute">Client</span><span>{booking.name}</span></div>
-        <div className="row-between"><span className="body-mute">Phone</span><span style={{ fontFamily: 'var(--mono)' }}>{booking.phone}</span></div>
-        <div className="row-between"><span className="body-mute">Email</span><span style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>{booking.email}</span></div>
+        <div className="row-between">
+          <span className="body-mute">Phone</span>
+          {phoneDigits ? (
+            <a href={`tel:${phoneDigits}`} style={{ fontFamily: 'var(--mono)', color: 'var(--espresso)', textDecoration: 'none' }}>{booking.phone}</a>
+          ) : <span className="body-mute">—</span>}
+        </div>
+        <div className="row-between">
+          <span className="body-mute">Email</span>
+          {booking.email ? (
+            <a href={`mailto:${booking.email}`} style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--espresso)', textDecoration: 'none' }}>{booking.email}</a>
+          ) : <span className="body-mute">—</span>}
+        </div>
         {booking.social && <div className="row-between"><span className="body-mute">Social</span><span>{booking.social}</span></div>}
         <div className="row-between"><span className="body-mute">Deposit via</span><span>{handle?.display || booking.payment}</span></div>
       </div>
+
+      {/* quick message buttons */}
+      {(phoneDigits || booking.email || igHandle) && (
+        <div className="contact-row">
+          {phoneDigits && (
+            <a href={`sms:${phoneDigits}?&body=${encodeURIComponent(apptText)}`} className="contact-btn" aria-label="Text client">
+              <Icon.message size={14}/> Text
+            </a>
+          )}
+          {phoneDigits && (
+            <a href={`tel:${phoneDigits}`} className="contact-btn" aria-label="Call client">
+              <Icon.phone size={14}/> Call
+            </a>
+          )}
+          {booking.email && (
+            <a href={`mailto:${booking.email}?subject=${encodeURIComponent('Your nailz.jae appointment')}&body=${encodeURIComponent(apptText)}`} className="contact-btn" aria-label="Email client">
+              <Icon.mail size={14}/> Email
+            </a>
+          )}
+          {igHandle && (
+            <a href={`https://instagram.com/${igHandle}`} target="_blank" rel="noreferrer" className="contact-btn" aria-label="Open Instagram">
+              <Icon.instagram size={14}/> DM
+            </a>
+          )}
+        </div>
+      )}
 
       {(booking.inspirationSrc || booking.note) && (
         <div style={{ marginTop: 12, padding: 10, background: 'rgba(201, 142, 142, 0.08)', borderRadius: 10, border: '1px solid rgba(201, 142, 142, 0.18)' }}>

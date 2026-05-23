@@ -44,6 +44,26 @@ function HomePage({ go }) {
             </div>
           </div>
         )}
+
+        <button
+          onClick={() => go('appts')}
+          className="card-tight"
+          style={{
+            marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            width: '100%', background: 'transparent', border: '1px dashed var(--line-2)',
+            borderRadius: 'var(--r-md)', padding: '12px 14px', cursor: 'pointer', textAlign: 'left',
+            color: 'var(--ink)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon.calendar size={18}/>
+            <div>
+              <div className="tiny" style={{ color: 'var(--ink-mute)', letterSpacing: '0.14em' }}>ALREADY BOOKED?</div>
+              <div className="h-card" style={{ fontSize: 14, marginTop: 2 }}>See my appointments</div>
+            </div>
+          </div>
+          <Icon.arrow size={14}/>
+        </button>
       </div>
 
       {/* Sets preview */}
@@ -425,4 +445,189 @@ function ContactPage({ go }) {
   );
 }
 
-Object.assign(window, { HomePage, GalleryPage, ServicesPage, ContactPage });
+// ─────────────────────────────────────────────────────────────
+// My Appointments — look up your bookings by email
+// ─────────────────────────────────────────────────────────────
+const APPTS_CONTACT_KEY = 'nailzjae.appts.contact';
+
+function isContactValid(s) {
+  const t = (s || '').trim();
+  if (!t) return false;
+  if (t.includes('@')) return /.+@.+\..+/.test(t);
+  // phone: count digits
+  const digits = t.replace(/\D/g, '');
+  return digits.length >= 7;
+}
+
+function MyAppointmentsPage({ go }) {
+  const [contact, setContact] = React.useState(() => {
+    try { return localStorage.getItem(APPTS_CONTACT_KEY) || ''; } catch (e) { return ''; }
+  });
+  const [submittedContact, setSubmittedContact] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError]     = React.useState(null);
+  const [results, setResults] = React.useState(null);
+
+  async function lookup(e) {
+    if (e?.preventDefault) e.preventDefault();
+    const clean = contact.trim();
+    if (!isContactValid(clean)) {
+      setError('Enter the email or phone number you used to book.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await window.lookupBookingsByContact(clean);
+      setResults(list);
+      setSubmittedContact(clean);
+      try { localStorage.setItem(APPTS_CONTACT_KEY, clean); } catch (err) {}
+    } catch (err) {
+      setError('Something went wrong — please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // auto-lookup on mount if we have a remembered contact
+  React.useEffect(() => {
+    if (contact && isContactValid(contact) && results === null) {
+      lookup();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function clearMemory() {
+    try { localStorage.removeItem(APPTS_CONTACT_KEY); } catch (e) {}
+    setResults(null);
+    setSubmittedContact('');
+    setContact('');
+  }
+
+  const today = ymd(new Date());
+  const upcoming = (results || []).filter(b => b.date >= today && b.status !== 'denied');
+  const past     = (results || []).filter(b => b.date <  today || b.status === 'denied');
+
+  return (
+    <div className="scroll page-enter">
+      <div className="safe-top"></div>
+      <AppBar onBack={() => go('home')} title="My Appointments"/>
+
+      <div style={{ padding: '8px 24px 14px' }}>
+        <div className="h-eyebrow">your bookings</div>
+        <div className="h-display" style={{ fontSize: 38, marginTop: 6 }}>Look up<br/>your appts</div>
+        <p className="body-mute" style={{ marginTop: 10 }}>
+          Enter the email or phone number you used when booking — I'll pull up all your appointments.
+        </p>
+      </div>
+
+      <form onSubmit={lookup} style={{ padding: '6px 24px 0' }}>
+        <div className="field">
+          <label>Email or phone</label>
+          <input
+            className="input"
+            type="text"
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder="you@example.com or (555) 123-4567"
+            autoComplete="email"
+            inputMode={contact.includes('@') ? 'email' : 'text'}
+          />
+        </div>
+        {error && (
+          <div className="tiny" style={{ color: 'var(--rose-deep)', marginTop: 6, letterSpacing: 0, textTransform: 'none', fontSize: 12 }}>
+            {error}
+          </div>
+        )}
+        <button
+          type="submit"
+          className="btn btn-primary btn-block"
+          disabled={loading}
+          style={{ marginTop: 12 }}
+        >
+          {loading ? 'Looking up…' : 'Find my appointments'} {!loading && <Icon.arrow/>}
+        </button>
+      </form>
+
+      {results !== null && (
+        <div style={{ padding: '24px 24px 0' }}>
+          {results.length === 0 ? (
+            <div className="card" style={{ background: 'transparent', borderStyle: 'dashed', textAlign: 'center', padding: 28 }}>
+              <Icon.calendar size={28}/>
+              <div className="body-mute" style={{ marginTop: 10 }}>No appointments found for <b style={{ color: 'var(--espresso)' }}>{submittedContact}</b>.</div>
+              <div className="tiny" style={{ marginTop: 8, color: 'var(--ink-faint)', letterSpacing: 0, textTransform: 'none', fontSize: 12 }}>
+                Double-check the email or phone, or book a new appointment.
+              </div>
+              <button className="btn btn-rose" onClick={() => go('book')} style={{ marginTop: 16 }}>
+                Book now <Icon.arrow/>
+              </button>
+            </div>
+          ) : (
+            <div className="stack-loose stagger">
+              {upcoming.length > 0 && (
+                <div>
+                  <div className="tiny" style={{ color: 'var(--ink-mute)', letterSpacing: '0.14em', marginBottom: 10 }}>
+                    UPCOMING · {upcoming.length}
+                  </div>
+                  <div className="stack">
+                    {upcoming.map(b => <ApptCard key={b.id} b={b}/>)}
+                  </div>
+                </div>
+              )}
+              {past.length > 0 && (
+                <div>
+                  <div className="tiny" style={{ color: 'var(--ink-mute)', letterSpacing: '0.14em', marginBottom: 10 }}>
+                    PAST · {past.length}
+                  </div>
+                  <div className="stack">
+                    {past.map(b => <ApptCard key={b.id} b={b} muted/>)}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ marginTop: 22, display: 'flex', justifyContent: 'center' }}>
+            <button onClick={clearMemory} className="copy-btn" style={{ textTransform: 'none', letterSpacing: '0.04em' }}>
+              Forget me on this device
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ height: 140 }}/>
+    </div>
+  );
+}
+
+function ApptCard({ b, muted }) {
+  const statusLabel = b.status === 'confirmed' ? 'Confirmed'
+                    : b.status === 'denied'    ? 'Denied'
+                    : 'Pending';
+  const badgeCls = b.status === 'confirmed' ? 'badge badge-confirmed'
+                 : b.status === 'denied'    ? 'badge badge-denied'
+                 : 'badge badge-pending';
+  return (
+    <div className="card" style={{ opacity: muted ? 0.72 : 1 }}>
+      <div className="row-between" style={{ alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="tiny" style={{ color: 'var(--rose-deep)' }}>{b.serviceName || 'Appointment'}</div>
+          <div className="h-card" style={{ marginTop: 4, fontSize: 17 }}>
+            {fmtDateLong(parseYmd(b.date))}
+          </div>
+          <div className="body-mute" style={{ marginTop: 2, fontSize: 13 }}>
+            {b.time}{b.servicePrice ? ' · $' + b.servicePrice : ''}
+          </div>
+          {b.note && (
+            <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(20,16,12,.04)', borderRadius: 8, fontSize: 12, color: 'var(--ink-mute)' }}>
+              {b.note}
+            </div>
+          )}
+        </div>
+        <span className={badgeCls}>{statusLabel}</span>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { HomePage, GalleryPage, ServicesPage, ContactPage, MyAppointmentsPage });
