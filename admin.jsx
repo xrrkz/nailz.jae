@@ -1,15 +1,29 @@
 // admin.jsx — owner control panel
 
 const ADMIN_TABS = ['Appointments', 'Calendar', 'Services', 'Payments', 'Site'];
-const AUTH_KEY = 'nailzjae.auth';
 
 function AdminPanel({ onExit }) {
   const [state] = useStore();
-  const [authed, setAuthed] = React.useState(() => sessionStorage.getItem(AUTH_KEY) === 'ok');
+  const [session, setSession] = React.useState(undefined); // undefined = loading
   const [tab, setTab] = React.useState('Appointments');
 
-  if (!authed) {
-    return <AdminLogin onExit={onExit} settings={state.settings} onAuthed={() => { sessionStorage.setItem(AUTH_KEY, 'ok'); setAuthed(true); }}/>;
+  React.useEffect(() => {
+    if (!window.sb) { setSession(null); return; }
+    window.sb.auth.getSession().then(({ data }) => setSession(data.session || null));
+    const { data: sub } = window.sb.auth.onAuthStateChange((_evt, s) => setSession(s || null));
+    return () => sub?.subscription?.unsubscribe();
+  }, []);
+
+  if (session === undefined) {
+    return <div className="scroll page-enter" style={{ background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="body-mute">Loading…</div></div>;
+  }
+  if (!session) {
+    return <AdminLogin onExit={onExit} onAuthed={(s) => setSession(s)}/>;
+  }
+
+  async function signOut() {
+    await window.sb?.auth.signOut();
+    setSession(null);
   }
 
   return (
@@ -22,7 +36,7 @@ function AdminPanel({ onExit }) {
           <button className="appbar-back" onClick={onExit} aria-label="Exit"><Icon.close/></button>
           <div className="tiny" style={{ color: 'var(--rose-deep)', letterSpacing: '0.18em' }}>OWNER · JAE</div>
           <button
-            onClick={() => { sessionStorage.removeItem(AUTH_KEY); setAuthed(false); }}
+            onClick={signOut}
             className="copy-btn"
             style={{ textTransform: 'uppercase', letterSpacing: '0.1em' }}
             aria-label="Log out"
@@ -59,22 +73,30 @@ function AdminPanel({ onExit }) {
 // ─────────────────────────────────────────────────────────────
 // Login gate
 // ─────────────────────────────────────────────────────────────
-function AdminLogin({ onExit, settings, onAuthed }) {
-  const [user, setUser] = React.useState('');
+function AdminLogin({ onExit, onAuthed }) {
+  const [email, setEmail] = React.useState('');
   const [pass, setPass] = React.useState('');
   const [err, setErr] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
   const [shake, setShake] = React.useState(false);
 
-  function submit(e) {
+  async function submit(e) {
     e?.preventDefault();
-    if (user.trim().toLowerCase() === (settings.adminUser || 'jae').toLowerCase() && pass === (settings.adminPass || 'nailz')) {
-      setErr('');
-      onAuthed();
-    } else {
-      setErr('That username or password is incorrect.');
+    if (!window.sb) { setErr('Auth is not configured.'); return; }
+    setBusy(true);
+    setErr('');
+    const { data, error } = await window.sb.auth.signInWithPassword({
+      email: email.trim(),
+      password: pass,
+    });
+    setBusy(false);
+    if (error || !data?.session) {
+      setErr(error?.message || 'Sign-in failed.');
       setShake(true);
       setTimeout(() => setShake(false), 500);
+      return;
     }
+    onAuthed(data.session);
   }
 
   return (
@@ -99,21 +121,21 @@ function AdminLogin({ onExit, settings, onAuthed }) {
           style={{ marginTop: 28 }}
         >
           <div className="field">
-            <label>Username</label>
-            <input className="input" autoComplete="username" value={user} onChange={e => setUser(e.target.value)} placeholder="jae" autoFocus/>
+            <label>Email</label>
+            <input className="input" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" autoFocus/>
           </div>
           <div className="field">
             <label>Password</label>
             <input className="input" type="password" autoComplete="current-password" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••"/>
           </div>
           {err && <div className="tiny" style={{ color: 'var(--rose-deep)', letterSpacing: '0.04em', textTransform: 'none', fontSize: 12 }}>{err}</div>}
-          <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: 6 }}>
-            Sign in <Icon.arrow/>
+          <button type="submit" className="btn btn-primary btn-block" disabled={busy} style={{ marginTop: 6 }}>
+            {busy ? 'Signing in…' : <>Sign in <Icon.arrow/></>}
           </button>
         </form>
 
         <div className="tiny" style={{ textAlign: 'center', marginTop: 24, color: 'var(--ink-faint)', letterSpacing: '0.1em' }}>
-          Default credentials: <b>{settings.adminUser || 'jae'}</b> / <b>{settings.adminPass || 'nailz'}</b>
+          Create an admin user in Supabase → Authentication → Users
         </div>
       </div>
     </div>
@@ -492,18 +514,9 @@ function AdminSite({ state }) {
       <div className="divider"/>
       <div className="tiny" style={{ color: 'var(--ink-mute)', letterSpacing: '0.14em' }}>OWNER LOGIN</div>
       <p className="body-mute" style={{ fontSize: 12 }}>
-        These are the credentials Jae uses to sign into <code style={{ fontFamily: 'var(--mono)' }}>/admin</code>.
+        Sign-in is handled by Supabase. Manage your email + password in the
+        Supabase dashboard under <b>Authentication → Users</b>.
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <div className="field">
-          <label>Username</label>
-          <input className="input" value={state.settings.adminUser || ''} onChange={e => updateSettings({ adminUser: e.target.value })}/>
-        </div>
-        <div className="field">
-          <label>Password</label>
-          <input className="input" value={state.settings.adminPass || ''} onChange={e => updateSettings({ adminPass: e.target.value })}/>
-        </div>
-      </div>
 
       <div className="divider"/>
       <div className="tiny" style={{ color: 'var(--ink-mute)', letterSpacing: '0.14em' }}>GALLERY PHOTOS</div>

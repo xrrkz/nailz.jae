@@ -90,7 +90,12 @@ function App() {
         />
         <TweakSection label="Demo data"/>
         <TweakButton onClick={seedSampleBookings}>Seed sample bookings</TweakButton>
-        <TweakButton onClick={() => { ['nailzjae.v1','nailzjae.v2','nailzjae.v3','nailzjae.v4','nailzjae.v5'].forEach(k => localStorage.removeItem(k)); sessionStorage.removeItem('nailzjae.auth'); location.reload(); }}>Reset all data</TweakButton>
+        <TweakButton onClick={async () => {
+          ['nailzjae.v1','nailzjae.v2','nailzjae.v3','nailzjae.v4','nailzjae.v5'].forEach(k => localStorage.removeItem(k));
+          sessionStorage.removeItem('nailzjae.auth');
+          try { await window.sb?.auth.signOut(); } catch (e) {}
+          location.reload();
+        }}>Reset all data</TweakButton>
       </TweaksPanel>
     </>
   );

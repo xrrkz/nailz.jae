@@ -156,6 +156,147 @@ function mutate(updater) {
   __subs.forEach(f => f());
 }
 
+// ─────────────────────────────────────────────────────────────
+// Supabase sync
+// Bookings + availability are the data that needs to cross devices.
+// Services / settings / gallery stay client-side for now.
+//
+// Strategy: keep the synchronous in-memory __state as the read source
+// so React code is unchanged. On load + on Realtime events we
+// reconcile from Supabase. On mutate we apply optimistically and
+// fire-and-forget the write.
+// ─────────────────────────────────────────────────────────────
+const __remote = {
+  ready: false,
+  enabled: typeof window !== 'undefined' && !!window.sb,
+};
+
+function rowToBooking(r) {
+  return {
+    id:              r.id,
+    serviceId:       r.service_id,
+    serviceName:     r.service_name,
+    servicePrice:    r.service_price,
+    date:            r.date,
+    time:            r.time,
+    name:            r.name,
+    phone:           r.phone || '',
+    email:           r.email || '',
+    social:          r.social || '',
+    payment:         r.payment || '',
+    note:            r.note || '',
+    inspirationSrc:  r.inspiration_src || '',
+    status:          r.status,
+    createdAt:       r.created_at ? Date.parse(r.created_at) : Date.now(),
+  };
+}
+function bookingToRow(b, state) {
+  const sv = (state || __state).services.find(s => s.id === b.serviceId);
+  return {
+    id:              b.id,
+    service_id:      b.serviceId,
+    service_name:    b.serviceName || sv?.name || null,
+    service_price:   b.servicePrice ?? sv?.price ?? null,
+    date:            b.date,
+    time:            b.time,
+    name:            b.name,
+    phone:           b.phone || null,
+    email:           b.email || null,
+    social:          b.social || null,
+    payment:         b.payment || null,
+    note:            b.note || null,
+    inspiration_src: b.inspirationSrc || null,
+    status:          b.status || 'pending',
+  };
+}
+
+async function hydrateFromRemote() {
+  if (!__remote.enabled) return;
+  const sb = window.sb;
+
+  const [{ data: bookings, error: be },
+         { data: avail,    error: ae },
+         { data: booked,   error: pe }] =
+    await Promise.all([
+      sb.from('bookings').select('*').order('created_at', { ascending: false }),
+      sb.from('availability').select('*'),
+      sb.rpc('public_booked_slots'),
+    ]);
+
+  if (be) console.warn('[store] bookings load failed', be);
+  if (ae) console.warn('[store] availability load failed', ae);
+  if (pe) console.warn('[store] booked_slots load failed', pe);
+
+  mutate(s => {
+    const next = { ...s };
+    if (!be && bookings && bookings.length) {
+      next.bookings = bookings.map(rowToBooking);
+    } else if (!be) {
+      // anon: keep empty
+      next.bookings = [];
+    }
+    if (!ae && avail) {
+      const map = {};
+      avail.forEach(row => { map[row.date] = { open: row.open, slots: row.slots || [] }; });
+      next.availability = { ...s.availability, ...map };
+    }
+    if (!pe && booked) {
+      const bt = {};
+      booked.forEach(({ date, time }) => {
+        (bt[date] ||= new Set()).add(time);
+      });
+      next.bookedTimes = bt;
+    }
+    return next;
+  });
+
+  __remote.ready = true;
+}
+
+function subscribeRemote() {
+  if (!__remote.enabled) return;
+  const sb = window.sb;
+
+  sb.channel('bookings-stream')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+      mutate(s => {
+        const list = s.bookings.slice();
+        if (payload.eventType === 'INSERT') {
+          const b = rowToBooking(payload.new);
+          if (!list.find(x => x.id === b.id)) list.unshift(b);
+        } else if (payload.eventType === 'UPDATE') {
+          const b = rowToBooking(payload.new);
+          const i = list.findIndex(x => x.id === b.id);
+          if (i >= 0) list[i] = b; else list.unshift(b);
+        } else if (payload.eventType === 'DELETE') {
+          const id = payload.old?.id;
+          return { ...s, bookings: list.filter(x => x.id !== id) };
+        }
+        return { ...s, bookings: list };
+      });
+    })
+    .subscribe();
+
+  sb.channel('availability-stream')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'availability' }, (payload) => {
+      mutate(s => {
+        const av = { ...s.availability };
+        if (payload.eventType === 'DELETE') {
+          delete av[payload.old?.date];
+        } else if (payload.new) {
+          av[payload.new.date] = { open: payload.new.open, slots: payload.new.slots || [] };
+        }
+        return { ...s, availability: av };
+      });
+    })
+    .subscribe();
+}
+
+// kick it off
+if (__remote.enabled) {
+  hydrateFromRemote().then(subscribeRemote);
+}
+
 // helper mutations
 function updateService(id, patch) {
   mutate(s => ({ ...s, services: s.services.map(sv => sv.id === id ? { ...sv, ...patch } : sv) }));
@@ -169,31 +310,69 @@ function removeService(id) {
   mutate(s => ({ ...s, services: s.services.filter(sv => sv.id !== id) }));
 }
 
+function _persistDay(dateKey, day) {
+  if (!__remote.enabled) return;
+  window.sb.from('availability')
+    .upsert({ date: dateKey, open: day.open, slots: day.slots })
+    .then(({ error }) => { if (error) console.warn('[store] availability upsert failed', error); });
+}
+
 function toggleDayOpen(dateKey) {
+  let nextDay;
   mutate(s => {
     const day = s.availability[dateKey] || { open: false, slots: [] };
     const open = !day.open;
-    return { ...s, availability: { ...s.availability, [dateKey]: { ...day, open, slots: open && day.slots.length === 0 ? ['9:00 AM','10:30 AM','12:00 PM','1:30 PM','3:00 PM','4:30 PM'] : day.slots } } };
+    nextDay = { ...day, open, slots: open && day.slots.length === 0 ? ['9:00 AM','10:30 AM','12:00 PM','1:30 PM','3:00 PM','4:30 PM'] : day.slots };
+    return { ...s, availability: { ...s.availability, [dateKey]: nextDay } };
   });
+  _persistDay(dateKey, nextDay);
 }
 function setDaySlots(dateKey, slots) {
+  let nextDay;
   mutate(s => {
     const day = s.availability[dateKey] || { open: true, slots: [] };
-    return { ...s, availability: { ...s.availability, [dateKey]: { ...day, slots } } };
+    nextDay = { ...day, slots };
+    return { ...s, availability: { ...s.availability, [dateKey]: nextDay } };
   });
+  _persistDay(dateKey, nextDay);
+}
+
+function _uuid() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return 'b-' + Date.now() + '-' + Math.random().toString(16).slice(2);
 }
 
 function addBooking(b) {
-  const id = 'b-' + Date.now();
+  const id = _uuid();
   const booking = { ...b, id, status: 'pending', createdAt: Date.now() };
-  mutate(s => ({ ...s, bookings: [...s.bookings, booking] }));
+  mutate(s => ({ ...s, bookings: [booking, ...s.bookings] }));
+  if (__remote.enabled) {
+    window.sb.from('bookings').insert(bookingToRow(booking)).then(({ error }) => {
+      if (error) console.warn('[store] booking insert failed', error);
+    });
+  }
   return booking;
 }
 function updateBooking(id, patch) {
   mutate(s => ({ ...s, bookings: s.bookings.map(b => b.id === id ? { ...b, ...patch } : b) }));
+  if (__remote.enabled) {
+    const row = {};
+    if (patch.status         !== undefined) row.status          = patch.status;
+    if (patch.note           !== undefined) row.note            = patch.note;
+    if (patch.inspirationSrc !== undefined) row.inspiration_src = patch.inspirationSrc;
+    if (Object.keys(row).length === 0) return;
+    window.sb.from('bookings').update(row).eq('id', id).then(({ error }) => {
+      if (error) console.warn('[store] booking update failed', error);
+    });
+  }
 }
 function removeBooking(id) {
   mutate(s => ({ ...s, bookings: s.bookings.filter(b => b.id !== id) }));
+  if (__remote.enabled) {
+    window.sb.from('bookings').delete().eq('id', id).then(({ error }) => {
+      if (error) console.warn('[store] booking delete failed', error);
+    });
+  }
 }
 
 function updateHandle(method, patch) {
@@ -205,13 +384,17 @@ function updateSettings(patch) {
 
 // queries
 function bookedTimesFor(dateKey) {
-  // returns Set of times that are pending or confirmed for that date
+  // returns Set of times that are pending or confirmed for that date.
+  // Sources: in-memory bookings (admin can read full rows) + the
+  // public_booked_slots() cache (so anon visitors also see taken slots).
   const set = new Set();
   __state.bookings.forEach(b => {
     if (b.date === dateKey && (b.status === 'pending' || b.status === 'confirmed')) {
       set.add(b.time);
     }
   });
+  const pub = __state.bookedTimes?.[dateKey];
+  if (pub) pub.forEach(t => set.add(t));
   return set;
 }
 
