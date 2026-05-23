@@ -13,11 +13,40 @@
 <meta name="apple-mobile-web-app-title" content="nailz.jae"/>
 <meta name="format-detection" content="telephone=no"/>
 
+<!-- DNS + connection warmup for CDNs and Supabase -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=DM+Serif+Display:ital@0;1&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Italiana&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://unpkg.com" crossorigin/>
+<link rel="preconnect" href="https://tsapqdsdjocrqpduaaav.supabase.co" crossorigin/>
 
+<!-- Stylesheet (render-blocking — small, inlined critical above) -->
 <link rel="stylesheet" href="styles.css"/>
+
+<!-- Non-render-blocking fonts: load async, fall back to system serif/sans until ready -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Italiana&family=Manrope:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'"/>
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Italiana&family=Manrope:wght@400;500;600;700&display=swap"/></noscript>
+<!-- Tweak-panel alternate fonts (deferred — only fetched if user picks them) -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=EB+Garamond:ital,wght@0,500;1,500&family=Playfair+Display:ital,wght@0,500;1,500&display=swap" media="print" onload="this.onload=null;this.media='all'"/>
+
+<!-- Preload all JSX sources so Babel can compile them from cache the moment it's ready -->
+<link rel="preload" as="fetch" href="ios-frame.jsx" crossorigin="anonymous"/>
+<link rel="preload" as="fetch" href="tweaks-panel.jsx" crossorigin="anonymous"/>
+<link rel="preload" as="fetch" href="store.jsx" crossorigin="anonymous"/>
+<link rel="preload" as="fetch" href="ui.jsx" crossorigin="anonymous"/>
+<link rel="preload" as="fetch" href="pages.jsx" crossorigin="anonymous"/>
+<link rel="preload" as="fetch" href="booking.jsx" crossorigin="anonymous"/>
+<link rel="preload" as="fetch" href="admin.jsx" crossorigin="anonymous"/>
+<link rel="preload" as="fetch" href="app.jsx" crossorigin="anonymous"/>
+
+<!-- Preload the heavy 3rd-party scripts in parallel with HTML parse -->
+<link rel="preload" as="script" href="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"/>
+<link rel="preload" as="script" href="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"/>
+<link rel="preload" as="script" href="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"/>
+<link rel="preload" as="script" href="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"/>
+
+<!-- Warm cache for the first hero image so the home page paints with art, not a placeholder -->
+<link rel="preload" as="image" href="assets/gallery/set-01.jpeg" fetchpriority="high"/>
+
 <link rel="apple-touch-icon" href="assets/gallery/set-01.jpeg"/>
 <link rel="icon" href="assets/gallery/set-01.jpeg"/>
 
@@ -55,31 +84,33 @@
 
 <div id="root"></div>
 
-<!-- React (production) + Babel standalone for in-browser JSX -->
+<!-- React (production) + Babel standalone for in-browser JSX.
+     Babel waits for DOMContentLoaded before scanning for type="text/babel" scripts,
+     so the JSX preloads above are already cached and the compile step is purely CPU-bound. -->
 <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-<!-- image-slot web component (drag-drop) -->
-<script src="image-slot.js"></script>
+<!-- image-slot web component (only used on admin + booking inspiration upload) -->
+<script defer src="image-slot.js"></script>
 
 <!-- Supabase: backend for bookings, availability, admin auth -->
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="supabase-client.js"></script>
 
 <!-- foundations -->
-<script type="text/babel" src="ios-frame.jsx"></script>
-<script type="text/babel" src="tweaks-panel.jsx"></script>
-<script type="text/babel" src="store.jsx"></script>
-<script type="text/babel" src="ui.jsx"></script>
+<script type="text/babel" data-presets="react" src="ios-frame.jsx"></script>
+<script type="text/babel" data-presets="react" src="tweaks-panel.jsx"></script>
+<script type="text/babel" data-presets="react" src="store.jsx"></script>
+<script type="text/babel" data-presets="react" src="ui.jsx"></script>
 
 <!-- pages -->
-<script type="text/babel" src="pages.jsx"></script>
-<script type="text/babel" src="booking.jsx"></script>
-<script type="text/babel" src="admin.jsx"></script>
+<script type="text/babel" data-presets="react" src="pages.jsx"></script>
+<script type="text/babel" data-presets="react" src="booking.jsx"></script>
+<script type="text/babel" data-presets="react" src="admin.jsx"></script>
 
 <!-- app entry -->
-<script type="text/babel" src="app.jsx"></script>
+<script type="text/babel" data-presets="react" src="app.jsx"></script>
 
 </body>
 </html>

@@ -66,7 +66,13 @@ function HomePage({ go }) {
               style={{ background: 'transparent', border: 0, padding: 0, cursor: 'pointer' }}
               aria-label="View gallery"
             >
-              <img src={g.src} alt="" loading="lazy"/>
+              <img
+                src={g.src}
+                alt=""
+                loading={i === 0 ? 'eager' : 'lazy'}
+                decoding="async"
+                fetchpriority={i === 0 ? 'high' : 'auto'}
+              />
             </button>
           ))}
         </div>
@@ -185,7 +191,13 @@ function GalleryPage({ go }) {
                 style={{ background: 'transparent', border: 0, padding: 0, cursor: 'pointer' }}
                 aria-label="View photo"
               >
-                <img src={g.src} alt="" loading="lazy"/>
+                <img
+                  src={g.src}
+                  alt=""
+                  loading={i < 2 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  fetchpriority={i === 0 ? 'high' : 'auto'}
+                />
               </button>
             ))}
           </div>
@@ -267,7 +279,7 @@ function Lightbox({ items, index, onChange, onClose, onBook }) {
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <img key={cur.id} src={cur.src} alt="" className="lightbox-img"/>
+        <img key={cur.id} src={cur.src} alt="" className="lightbox-img" decoding="async"/>
       </div>
 
       {/* nav arrows */}
@@ -369,8 +381,8 @@ function ContactPage({ go }) {
   const socials = [
     { id: 'ig1',  label: 'Instagram',         handle: '@nailz.jae',       icon: Icon.instagram,  href: 'https://instagram.com/nailz.jae' },
     { id: 'ig2',  label: 'Instagram',         handle: '@jaelynervin_',    icon: Icon.instagram,  href: 'https://instagram.com/jaelynervin_' },
-    { id: 'fb',   label: 'Facebook',          handle: 'Jaelyn Ervin',     icon: Icon.facebook,   href: 'https://facebook.com' },
-    { id: 'sc',   label: 'Snapchat',          handle: 'jaelyn-ervin5',    icon: Icon.snapchat,   href: '#' },
+    { id: 'fb',   label: 'Facebook',          handle: 'Jaelyn Ervin',     icon: Icon.facebook,   href: 'https://www.facebook.com/jaelyn.ervin' },
+    { id: 'sc',   label: 'Snapchat',          handle: 'jaelyn-ervin5',    icon: Icon.snapchat,   href: 'https://www.snapchat.com/add/jaelyn-ervin5' },
   ];
   return (
     <div className="scroll page-enter">
