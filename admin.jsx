@@ -210,7 +210,7 @@ function AppointmentCard({ booking, state }) {
 
   const smsBody = (() => {
     if (booking.status === 'confirmed') {
-      return `Hi ${firstName}! It's Jae 💅 Just confirming your ${svcName} — ${dateShort} at ${booking.time}. ` +
+      return `Hi ${firstName}! It's Jae — just confirming your ${svcName} on ${dateShort} at ${booking.time}. ` +
              (remaining != null ? `Remaining balance is $${remaining} due at the appt. ` : '') +
              `Can't wait to see you! Reply here if you need to reschedule.`;
     }
@@ -218,7 +218,7 @@ function AppointmentCard({ booking, state }) {
       return `Hi ${firstName}, it's Jae — unfortunately I can't fit your ${svcName} on ${dateShort} at ${booking.time}. ` +
              `Let me know if you'd like to pick another day and I'll get you locked in.`;
     }
-    return `Hi ${firstName}! It's Jae 💅 I got your booking for a ${svcName} on ${dateShort} at ${booking.time}. ` +
+    return `Hi ${firstName}! It's Jae — I got your booking for a ${svcName} on ${dateShort} at ${booking.time}. ` +
            `Just confirming I received your $${dep} deposit — once I do, your slot is locked in. Let me know if you have any questions!`;
   })();
 
@@ -261,10 +261,10 @@ function AppointmentCard({ booking, state }) {
   })();
 
   const igBody = booking.status === 'confirmed'
-    ? `hey ${firstName}! confirming your ${svcName} ${dateShort} @ ${booking.time} ✶ can't wait!`
+    ? `hey ${firstName}! confirming your ${svcName} ${dateShort} @ ${booking.time} — can't wait!`
     : booking.status === 'denied'
       ? `hi ${firstName}, sadly can't fit ${dateShort} @ ${booking.time} — wanna pick another day?`
-      : `hey ${firstName}! got your booking for ${svcName} ${dateShort} @ ${booking.time} — confirming deposit now ✶`;
+      : `hey ${firstName}! got your booking for ${svcName} ${dateShort} @ ${booking.time} — confirming deposit now`;
 
   return (
     <div className="admin-card">
