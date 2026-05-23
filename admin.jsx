@@ -188,6 +188,7 @@ function AdminAppointments({ state }) {
 function AppointmentCard({ booking, state }) {
   const sv = state.services.find(s => s.id === booking.serviceId);
   const handle = state.handles[booking.payment];
+  const [igCopied, setIgCopied] = React.useState(false);
   const statusLabel = booking.status === 'confirmed' ? 'confirmed' : booking.status === 'denied' ? 'denied' : 'needs review';
   const badgeClass =
     booking.status === 'confirmed' ? 'badge-confirmed' :
@@ -195,8 +196,75 @@ function AppointmentCard({ booking, state }) {
                                      'badge-pending';
 
   const phoneDigits = (booking.phone || '').replace(/[^0-9+]/g, '');
-  const apptText = `Hi ${booking.name?.split(' ')[0] || 'there'} — about your ${sv?.name || 'appointment'} on ${fmtDateLong(parseYmd(booking.date))} at ${booking.time}:`;
   const igHandle = (booking.social || '').replace(/^@/, '').trim();
+
+  // pre-filled message templates — Jae just clicks send.
+  // Different content per channel + per status, so the body is
+  // useful out of the box but easy to edit.
+  const firstName = (booking.name?.split(' ')[0]) || 'there';
+  const dateLong  = fmtDateLong(parseYmd(booking.date));
+  const dateShort = fmtDateShort(parseYmd(booking.date));
+  const svcName   = sv?.name || 'your appointment';
+  const dep       = state.settings?.depositAmount ?? 15;
+  const remaining = sv?.price != null ? Math.max(0, sv.price - dep) : null;
+
+  const smsBody = (() => {
+    if (booking.status === 'confirmed') {
+      return `Hi ${firstName}! It's Jae 💅 Just confirming your ${svcName} — ${dateShort} at ${booking.time}. ` +
+             (remaining != null ? `Remaining balance is $${remaining} due at the appt. ` : '') +
+             `Can't wait to see you! Reply here if you need to reschedule.`;
+    }
+    if (booking.status === 'denied') {
+      return `Hi ${firstName}, it's Jae — unfortunately I can't fit your ${svcName} on ${dateShort} at ${booking.time}. ` +
+             `Let me know if you'd like to pick another day and I'll get you locked in.`;
+    }
+    return `Hi ${firstName}! It's Jae 💅 I got your booking for a ${svcName} on ${dateShort} at ${booking.time}. ` +
+           `Just confirming I received your $${dep} deposit — once I do, your slot is locked in. Let me know if you have any questions!`;
+  })();
+
+  const emailSubject = booking.status === 'confirmed'
+    ? `Your nailz.jae appointment — ${dateShort} at ${booking.time}`
+    : booking.status === 'denied'
+      ? `About your nailz.jae booking — ${dateShort}`
+      : `Confirming your nailz.jae booking — ${dateShort} at ${booking.time}`;
+
+  const emailBody = (() => {
+    const lines = [`Hi ${firstName},`, ''];
+    if (booking.status === 'confirmed') {
+      lines.push(`Just confirming your appointment with me:`);
+    } else if (booking.status === 'denied') {
+      lines.push(`Unfortunately I'm not able to fit your booking in on this date:`);
+    } else {
+      lines.push(`Thanks for booking with me! Here are your details:`);
+    }
+    lines.push('');
+    lines.push(`Service:  ${svcName}`);
+    lines.push(`Date:     ${dateLong}`);
+    lines.push(`Time:     ${booking.time}`);
+    if (sv?.price != null) {
+      lines.push(`Total:    $${sv.price}  (Deposit $${dep}${remaining != null ? `, $${remaining} due at appt` : ''})`);
+    }
+    if (booking.payment) lines.push(`Deposit:  via ${booking.payment}`);
+    if (booking.note)    { lines.push(''); lines.push(`Your note: "${booking.note}"`); }
+    lines.push('');
+    if (booking.status === 'confirmed') {
+      lines.push(`Your slot is locked in — can't wait to see you! If anything changes, just reply to this email or DM me on IG (@nailz.jae).`);
+    } else if (booking.status === 'denied') {
+      lines.push(`Let me know if you'd like to pick another day and I'll get you locked in.`);
+    } else {
+      lines.push(`I'll confirm your deposit and lock in your slot within a few hours. Reply here or DM @nailz.jae if you have any questions.`);
+    }
+    lines.push('');
+    lines.push(`— Jaelyn`);
+    lines.push(`nailz.jae`);
+    return lines.join('\n');
+  })();
+
+  const igBody = booking.status === 'confirmed'
+    ? `hey ${firstName}! confirming your ${svcName} ${dateShort} @ ${booking.time} ✶ can't wait!`
+    : booking.status === 'denied'
+      ? `hi ${firstName}, sadly can't fit ${dateShort} @ ${booking.time} — wanna pick another day?`
+      : `hey ${firstName}! got your booking for ${svcName} ${dateShort} @ ${booking.time} — confirming deposit now ✶`;
 
   return (
     <div className="admin-card">
@@ -228,11 +296,15 @@ function AppointmentCard({ booking, state }) {
         <div className="row-between"><span className="body-mute">Deposit via</span><span>{handle?.display || booking.payment}</span></div>
       </div>
 
-      {/* quick message buttons */}
+      {/* quick message buttons — body pre-filled with appt details */}
       {(phoneDigits || booking.email || igHandle) && (
         <div className="contact-row">
           {phoneDigits && (
-            <a href={`sms:${phoneDigits}?&body=${encodeURIComponent(apptText)}`} className="contact-btn" aria-label="Text client">
+            <a
+              href={`sms:${phoneDigits}${/iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(smsBody)}`}
+              className="contact-btn"
+              aria-label="Text client"
+            >
               <Icon.message size={14}/> Text
             </a>
           )}
@@ -242,14 +314,29 @@ function AppointmentCard({ booking, state }) {
             </a>
           )}
           {booking.email && (
-            <a href={`mailto:${booking.email}?subject=${encodeURIComponent('Your nailz.jae appointment')}&body=${encodeURIComponent(apptText)}`} className="contact-btn" aria-label="Email client">
+            <a
+              href={`mailto:${booking.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
+              className="contact-btn"
+              aria-label="Email client"
+            >
               <Icon.mail size={14}/> Email
             </a>
           )}
           {igHandle && (
-            <a href={`https://instagram.com/${igHandle}`} target="_blank" rel="noreferrer" className="contact-btn" aria-label="Open Instagram">
-              <Icon.instagram size={14}/> DM
-            </a>
+            <button
+              type="button"
+              className="contact-btn"
+              aria-label="Open Instagram DM (copies pre-written message)"
+              title="Copies a pre-written message to your clipboard, then opens Instagram DM"
+              onClick={() => {
+                try { navigator.clipboard?.writeText(igBody); } catch (e) {}
+                setIgCopied(true);
+                setTimeout(() => setIgCopied(false), 2000);
+                window.open(`https://ig.me/m/${igHandle}`, '_blank', 'noopener');
+              }}
+            >
+              <Icon.instagram size={14}/> {igCopied ? 'Copied — paste in DM' : 'DM'}
+            </button>
           )}
         </div>
       )}
