@@ -387,17 +387,19 @@ button.card:active, a.card:active { transform: scale(0.985); transition-duration
 
 /* tab content cross-fade — set key=route on app to trigger */
 .route-pane {
-  animation: route-in 380ms var(--ease) both;
+  animation: route-in 320ms var(--ease) both;
+  will-change: opacity, transform;
+  contain: layout paint;
 }
 @keyframes route-in {
-  from { opacity: 0; transform: translateY(6px) scale(0.992); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translate3d(0, 6px, 0) scale(0.992); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 }
 
-/* hero cascade — slow elegant reveal for the home wordmark + CTAs */
+/* hero cascade — translate-only (no filter:blur) keeps it on the compositor */
 @keyframes hero-reveal {
-  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
-  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 .hero-line     { animation: hero-reveal 700ms var(--ease) both;     animation-delay:  40ms; }
 .hero-mark     { animation: hero-reveal 900ms var(--ease) both;     animation-delay: 120ms; }
@@ -580,8 +582,8 @@ button.card:active, a.card:active { transform: scale(0.985); transition-duration
   animation: handle-in 360ms var(--ease) both;
 }
 @keyframes handle-in {
-  from { opacity: 0; transform: translateY(4px); filter: blur(2px); }
-  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+  from { opacity: 0; transform: translate3d(0, 4px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 .send-to-card {
