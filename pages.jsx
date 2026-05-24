@@ -444,7 +444,7 @@ function ServicesPage({ go }) {
                   <span key={opt} className="chip" style={{ fontSize: 12 }}>{opt}</span>
                 ))}
               </div>
-              <button className="btn btn-primary btn-block" onClick={() => go('book')} style={{ marginTop: 14 }}>
+              <button className="btn btn-primary btn-block" onClick={() => go('book', { serviceType: t.id })} style={{ marginTop: 14 }}>
                 Book {t.label} <Icon.arrow/>
               </button>
             </div>
