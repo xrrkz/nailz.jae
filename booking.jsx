@@ -1,6 +1,6 @@
 // booking.jsx — multi-step booking flow
 
-const STEPS = ['Service', 'Date & Time', 'Notes', 'Your Info', 'Deposit', 'Done'];
+const STEPS = ['Build Your Set', 'Notes', 'Your Info', 'Deposit', 'Done'];
 
 function BookingFlow({ initial, onExit }) {
   const [state] = useStore();
@@ -8,9 +8,9 @@ function BookingFlow({ initial, onExit }) {
   const [direction, setDirection] = React.useState('fwd');
   const scrollRef = React.useRef(null);
   const [draft, setDraft] = React.useState({
-    serviceId: initial?.serviceId || null,
-    date: null,
-    time: null,
+    serviceType: null,
+    serviceOrigin: null,
+    serviceDesign: null,
     name: '',
     phone: '',
     email: '',
@@ -22,14 +22,13 @@ function BookingFlow({ initial, onExit }) {
     note: '',
   });
 
-  // scroll to top when step changes (gentle, since the pane animation already shifts)
   React.useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [step]);
 
-  const service = state.services.find(s => s.id === draft.serviceId);
+  const serviceName = buildServiceName(draft.serviceType, draft.serviceOrigin, draft.serviceDesign);
 
   function setField(k, v) { setDraft(d => ({ ...d, [k]: v })); }
 
@@ -39,21 +38,28 @@ function BookingFlow({ initial, onExit }) {
     else { setDirection('back'); setStep(s => s - 1); }
   }
 
-  // step validation
+  const typeConfig = SERVICE_BUILDER.types.find(t => t.id === draft.serviceType);
+
   const canProceed = (() => {
-    if (step === 0) return !!draft.serviceId;
-    if (step === 1) return !!draft.date && !!draft.time;
-    if (step === 2) return true;  // notes step always optional
-    if (step === 3) return draft.name.trim() && draft.phone.trim() && draft.email.trim();
-    if (step === 4) return !!draft.paymentMethod;
+    if (step === 0) {
+      if (!draft.serviceType) return false;
+      if (typeConfig?.hasOrigin && !draft.serviceOrigin) return false;
+      if (typeConfig?.hasDesign && !draft.serviceDesign) return false;
+      return true;
+    }
+    if (step === 1) return true;
+    if (step === 2) return draft.name.trim() && draft.phone.trim() && draft.email.trim();
+    if (step === 3) return !!draft.paymentMethod;
     return false;
   })();
 
   function submit() {
     const b = addBooking({
-      serviceId: draft.serviceId,
-      date: draft.date,
-      time: draft.time,
+      serviceId: null,
+      serviceName: serviceName,
+      servicePrice: null,
+      date: null,
+      time: null,
       name: draft.name,
       phone: draft.phone,
       email: draft.email,
@@ -64,7 +70,7 @@ function BookingFlow({ initial, onExit }) {
       note: draft.note,
     });
     setField('bookingId', b.id);
-    setStep(5);
+    setStep(4);
   }
 
   return (
@@ -89,25 +95,24 @@ function BookingFlow({ initial, onExit }) {
       </div>
 
       <div key={step} className={'step-pane step-' + direction} style={{ padding: '14px 24px 24px' }}>
-        {step === 0 && <StepService draft={draft} setField={setField} services={state.services}/>}
-        {step === 1 && <StepDateTime draft={draft} setField={setField} availability={state.availability}/>}
-        {step === 2 && <StepNotes draft={draft} setField={setField}/>}
-        {step === 3 && <StepDetails draft={draft} setField={setField}/>}
-        {step === 4 && <StepDeposit draft={draft} setField={setField} service={service} state={state}/>}
-        {step === 5 && <StepDone draft={draft} service={service} onExit={onExit}/>}
+        {step === 0 && <StepBuildService draft={draft} setField={setField}/>}
+        {step === 1 && <StepNotes draft={draft} setField={setField}/>}
+        {step === 2 && <StepDetails draft={draft} setField={setField}/>}
+        {step === 3 && <StepDeposit draft={draft} setField={setField} serviceName={serviceName} state={state}/>}
+        {step === 4 && <StepDone draft={draft} serviceName={serviceName} onExit={onExit}/>}
       </div>
 
       <div style={{ height: 160 }}/>
     </div>
 
-    {step < 5 && (
+    {step < 4 && (
       <div className="cta-footer">
         <button
-          className={'btn btn-block ' + (step === 4 ? 'btn-rose' : 'btn-primary')}
+          className={'btn btn-block ' + (step === 3 ? 'btn-rose' : 'btn-primary')}
           disabled={!canProceed}
-          onClick={() => step === 4 ? submit() : next()}
+          onClick={() => step === 3 ? submit() : next()}
         >
-          {step === 4 ? "I've sent my deposit" : 'Continue'} <Icon.arrow/>
+          {step === 3 ? "I've sent my deposit" : 'Continue'} <Icon.arrow/>
         </button>
       </div>
     )}
@@ -116,14 +121,22 @@ function BookingFlow({ initial, onExit }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Step 1: Service
+// Step 1: Build Your Set
 // ─────────────────────────────────────────────────────────────
-function StepService({ draft, setField, services }) {
+function StepBuildService({ draft, setField }) {
+  const typeConfig = SERVICE_BUILDER.types.find(t => t.id === draft.serviceType);
+
+  function selectType(id) {
+    setField('serviceType', id);
+    setField('serviceOrigin', null);
+    setField('serviceDesign', null);
+  }
+
   return (
     <div className="stack stagger">
       <div>
-        <div className="h-section">Pick your service</div>
-        <p className="body-mute" style={{ marginTop: 6 }}>You can change this later if you message me.</p>
+        <div className="h-section">Build your set</div>
+        <p className="body-mute" style={{ marginTop: 6 }}>Pick your service, then customize. Final pricing is discussed during your appointment.</p>
       </div>
 
       {draft.inspirationSrc && (
@@ -145,125 +158,70 @@ function StepService({ draft, setField, services }) {
         </div>
       )}
 
-      {services.map(sv => (
-        <button
-          key={sv.id}
-          onClick={() => setField('serviceId', sv.id)}
-          className="card"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14,
-            width: '100%', cursor: 'pointer',
-            borderColor: draft.serviceId === sv.id ? 'var(--rose)' : 'var(--line)',
-            background: draft.serviceId === sv.id ? 'rgba(201, 142, 142, 0.10)' : 'var(--bg-soft)',
-            textAlign: 'left',
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="tiny" style={{ color: 'var(--rose-deep)' }}>{sv.category} · {sv.length}</div>
-            <div className="h-card" style={{ marginTop: 4, fontSize: 17 }}>{sv.name}</div>
-            <div className="body-mute" style={{ marginTop: 2, fontSize: 12 }}>{sv.durationMin} minutes</div>
-          </div>
-          <PriceTag amount={sv.price} size={20}/>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// Step 2: Date + Time
-// ─────────────────────────────────────────────────────────────
-function StepDateTime({ draft, setField, availability }) {
-  // build next 21 days
-  const today = new Date();
-  const todayKey = ymd(today);
-  const days = React.useMemo(() => {
-    const out = [];
-    for (let i = 0; i < 21; i++) {
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-      out.push({ key: ymd(d), date: d });
-    }
-    return out;
-  }, []);
-
-  const selectedDay = draft.date ? availability[draft.date] : null;
-  const bookedSet = draft.date ? bookedTimesFor(draft.date) : new Set();
-
-  // auto-scroll picked day into view
-  const stripRef = React.useRef(null);
-  React.useEffect(() => {
-    if (!draft.date || !stripRef.current) return;
-    const el = stripRef.current.querySelector(`[data-day="${draft.date}"]`);
-    if (el && typeof el.scrollIntoView === 'function') {
-      try {
-        const strip = stripRef.current;
-        const left = el.offsetLeft - 20;
-        strip.scrollTo({ left, behavior: 'smooth' });
-      } catch (e) {}
-    }
-  }, [draft.date]);
-
-  return (
-    <div className="stack-loose stagger">
+      {/* Service Type */}
       <div>
-        <div className="h-section">Choose a date</div>
-        <p className="body-mute" style={{ marginTop: 6 }}>Swipe to see more days. Greyed days are closed.</p>
-      </div>
-
-      <div className="day-strip" ref={stripRef}>
-        {days.map(d => {
-          const av = availability[d.key];
-          const closed = !av || !av.open || av.slots.length === 0;
-          const allBooked = av && av.slots.every(t => bookedTimesFor(d.key).has(t));
-          const dis = closed || allBooked;
-          const active = draft.date === d.key;
-          const isToday = d.key === todayKey;
-          return (
+        <div className="tiny" style={{ color: 'var(--ink-mute)', letterSpacing: '0.14em', marginBottom: 10 }}>WHAT DO YOU NEED?</div>
+        <div className="stack">
+          {SERVICE_BUILDER.types.map(t => (
             <button
-              key={d.key}
-              data-day={d.key}
-              className={'day-cell' + (active ? ' is-active' : '') + (dis ? ' is-closed' : '') + (isToday ? ' is-today' : '')}
-              onClick={() => !dis && (setField('date', d.key), setField('time', null))}
-              disabled={dis}
+              key={t.id}
+              onClick={() => selectType(t.id)}
+              className="card"
+              style={{
+                width: '100%', cursor: 'pointer', textAlign: 'left',
+                borderColor: draft.serviceType === t.id ? 'var(--rose)' : 'var(--line)',
+                background: draft.serviceType === t.id ? 'rgba(201, 142, 142, 0.10)' : 'var(--bg-soft)',
+              }}
             >
-              <div className="dow">{isToday ? 'TODAY' : d.date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-              <div className="dom">{d.date.getDate()}</div>
+              <div className="h-card" style={{ fontSize: 18 }}>{t.label}</div>
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
-      {selectedDay && (
-        <div key={'day-' + draft.date}>
-          <div className="h-card" style={{ fontSize: 18, marginBottom: 12 }}>
-            {fmtDateLong(parseYmd(draft.date))}
+      {/* Origin (Fill In / Soak Off) */}
+      {typeConfig?.hasOrigin && (
+        <div>
+          <div className="tiny" style={{ color: 'var(--ink-mute)', letterSpacing: '0.14em', marginBottom: 10 }}>WHOSE WORK?</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {SERVICE_BUILDER.origins.map(o => (
+              <button
+                key={o.id}
+                onClick={() => setField('serviceOrigin', o.id)}
+                className="card"
+                style={{
+                  flex: 1, cursor: 'pointer', textAlign: 'center',
+                  borderColor: draft.serviceOrigin === o.id ? 'var(--rose)' : 'var(--line)',
+                  background: draft.serviceOrigin === o.id ? 'rgba(201, 142, 142, 0.10)' : 'var(--bg-soft)',
+                }}
+              >
+                <div className="h-card" style={{ fontSize: 16 }}>{o.label}</div>
+              </button>
+            ))}
           </div>
-          {selectedDay.slots.length === 0 ? (
-            <p className="body-mute">No times released for this day yet.</p>
-          ) : (
-            <div className="time-grid">
-              {selectedDay.slots.map(t => {
-                const booked = bookedSet.has(t);
-                return (
-                  <button
-                    key={t}
-                    className={'time-cell' + (draft.time === t ? ' is-active' : '') + (booked ? ' is-booked' : '')}
-                    onClick={() => !booked && setField('time', t)}
-                    disabled={booked}
-                  >
-                    {t}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 
-      {!draft.date && (
-        <div className="card" style={{ background: 'transparent', borderStyle: 'dashed', textAlign: 'center' }}>
-          <Icon.calendar size={28}/>
-          <p className="body-mute" style={{ marginTop: 8 }}>Pick a day above to see available times.</p>
+      {/* Design (Full Set / Fill In) */}
+      {typeConfig?.hasDesign && (
+        <div>
+          <div className="tiny" style={{ color: 'var(--ink-mute)', letterSpacing: '0.14em', marginBottom: 10 }}>CHOOSE YOUR LOOK</div>
+          <div className="stack">
+            {SERVICE_BUILDER.designs.map(d => (
+              <button
+                key={d.id}
+                onClick={() => setField('serviceDesign', d.id)}
+                className="card"
+                style={{
+                  width: '100%', cursor: 'pointer', textAlign: 'left',
+                  borderColor: draft.serviceDesign === d.id ? 'var(--rose)' : 'var(--line)',
+                  background: draft.serviceDesign === d.id ? 'rgba(201, 142, 142, 0.10)' : 'var(--bg-soft)',
+                }}
+              >
+                <div className="h-card" style={{ fontSize: 16 }}>{d.label}</div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -271,7 +229,7 @@ function StepDateTime({ draft, setField, availability }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Step 3: Notes & Inspo
+// Step 2: Notes & Inspo
 // ─────────────────────────────────────────────────────────────
 function StepNotes({ draft, setField }) {
   const fileRef = React.useRef(null);
@@ -283,7 +241,6 @@ function StepNotes({ draft, setField }) {
       alert('Please pick a photo (JPG, PNG, etc).');
       return;
     }
-    // soft cap: 5MB
     if (file.size > 5 * 1024 * 1024) {
       alert('That photo is too big — please pick one under 5MB.');
       return;
@@ -291,7 +248,7 @@ function StepNotes({ draft, setField }) {
     const reader = new FileReader();
     reader.onload = () => {
       setField('inspirationSrc', reader.result);
-      setField('inspirationId', null); // user-uploaded, no gallery id
+      setField('inspirationId', null);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -365,7 +322,7 @@ function StepNotes({ draft, setField }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Step 4: Details
+// Step 3: Details
 // ─────────────────────────────────────────────────────────────
 function StepDetails({ draft, setField }) {
   return (
@@ -398,7 +355,7 @@ function StepDetails({ draft, setField }) {
 // ─────────────────────────────────────────────────────────────
 // Step 4: Deposit
 // ─────────────────────────────────────────────────────────────
-function StepDeposit({ draft, setField, service, state }) {
+function StepDeposit({ draft, setField, serviceName, state }) {
   const methods = [
     { id: 'venmo',  label: 'Venmo'  },
     { id: 'zelle',  label: 'Zelle'  },
@@ -408,7 +365,7 @@ function StepDeposit({ draft, setField, service, state }) {
 
   const handle = draft.paymentMethod ? state.handles[draft.paymentMethod] : null;
   const dep = state.settings.depositAmount;
-  const noteText = `${draft.name || 'Your name'} · ${draft.time || ''} ${draft.date ? fmtDateShort(parseYmd(draft.date)) : ''}`;
+  const noteText = `${draft.name || 'Your name'} · ${serviceName}`;
   const [showPolicy, setShowPolicy] = React.useState(false);
 
   return (
@@ -416,27 +373,23 @@ function StepDeposit({ draft, setField, service, state }) {
       <div>
         <div className="h-section">Checkout</div>
         <p className="body-mute" style={{ marginTop: 6 }}>
-          Send a <b style={{ color: 'var(--espresso)' }}>${dep} deposit</b> to lock in your slot — goes toward your total.
+          Send a <b style={{ color: 'var(--espresso)' }}>${dep} no-show deposit</b> to submit your request. Final pricing will be discussed during your appointment.
         </p>
       </div>
 
       {/* Compact summary */}
       <div className="card" style={{ padding: 14 }}>
-        <div className="tiny" style={{ color: 'var(--ink-mute)', letterSpacing: '0.14em' }}>YOUR APPOINTMENT</div>
+        <div className="tiny" style={{ color: 'var(--ink-mute)', letterSpacing: '0.14em' }}>YOUR REQUEST</div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 8 }}>
           {draft.inspirationSrc && (
             <img src={draft.inspirationSrc} alt="" style={{ width: 52, height: 66, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }}/>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="h-card" style={{ fontSize: 17 }}>{service?.name}</div>
-            <div className="body-mute" style={{ marginTop: 2, fontSize: 13 }}>
-              {draft.date && fmtDateLong(parseYmd(draft.date))}
-            </div>
-            <div className="body-mute" style={{ fontSize: 13 }}>
-              {draft.time} · {service?.durationMin}m
+            <div className="h-card" style={{ fontSize: 17 }}>{serviceName}</div>
+            <div className="body-mute" style={{ marginTop: 4, fontSize: 13 }}>
+              Pricing discussed at appointment
             </div>
           </div>
-          <PriceTag amount={service?.price} size={22}/>
         </div>
         {draft.note && (
           <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(20,16,12,.04)', borderRadius: 8 }}>
@@ -446,12 +399,8 @@ function StepDeposit({ draft, setField, service, state }) {
         )}
         <div style={{ height: 1, background: 'var(--line)', margin: '12px 0 10px' }}/>
         <div className="row-between">
-          <span className="body-mute" style={{ fontSize: 13 }}>Deposit now</span>
+          <span className="body-mute" style={{ fontSize: 13 }}>No-show deposit</span>
           <span className="body" style={{ color: 'var(--rose-deep)', fontWeight: 600 }}>${dep}</span>
-        </div>
-        <div className="row-between" style={{ marginTop: 2 }}>
-          <span className="body-mute" style={{ fontSize: 13 }}>Due at appointment</span>
-          <span className="body" style={{ color: 'var(--espresso)', fontWeight: 600 }}>${(service?.price || 0) - dep}</span>
         </div>
       </div>
 
@@ -472,7 +421,7 @@ function StepDeposit({ draft, setField, service, state }) {
         </div>
       </div>
 
-      {/* Send-to card — content crossfades when method changes */}
+      {/* Send-to card */}
       {handle && (
         <div className="card send-to-card" style={{ background: 'var(--bg-soft-2)', borderColor: 'var(--rose)' }}>
           <div className="row-between">
@@ -505,7 +454,7 @@ function StepDeposit({ draft, setField, service, state }) {
       <div className={'policy-collapse ' + (showPolicy ? 'is-open' : '')}>
         <div className="policy-inner">
           <p className="tiny" style={{ margin: 0, lineHeight: 1.6, color: 'var(--ink-mute)', letterSpacing: 0, fontSize: 11, textTransform: 'none' }}>
-            A ${dep} deposit is required to secure your appointment. This deposit goes toward the total cost of your service, and the remaining balance is due at your appointment. Deposits are non-refundable — no-shows forfeit the deposit. No refunds.
+            A ${dep} no-show deposit is required to secure your appointment. This is not applied toward the total cost of your service. All final pricing will be discussed during your appointment. Deposits are non-refundable — no-shows forfeit the deposit.
           </p>
         </div>
       </div>
@@ -516,7 +465,7 @@ function StepDeposit({ draft, setField, service, state }) {
 // ─────────────────────────────────────────────────────────────
 // Step 5: Done
 // ─────────────────────────────────────────────────────────────
-function StepDone({ draft, service, onExit }) {
+function StepDone({ draft, serviceName, onExit }) {
   return (
     <div className="stack-loose" style={{ textAlign: 'center', paddingTop: 18 }}>
       <div className="bloom" style={{
@@ -529,18 +478,18 @@ function StepDone({ draft, service, onExit }) {
         <Icon.check size={36}/>
       </div>
       <div>
-        <div className="h-eyebrow" style={{ color: 'var(--rose-deep)' }}>booking submitted</div>
+        <div className="h-eyebrow" style={{ color: 'var(--rose-deep)' }}>request submitted</div>
         <div className="h-display" style={{ fontSize: 40, marginTop: 8 }}>Pending<br/>confirmation</div>
         <p className="body-mute" style={{ marginTop: 16, maxWidth: 300, margin: '16px auto 0' }}>
-          I'll confirm your deposit and lock in your slot, usually within a few hours. Watch your email + IG.
+          I'll review your request and reach out to confirm your appointment, usually within a few hours. Watch your email + IG.
         </p>
       </div>
 
       <div className="card" style={{ textAlign: 'left' }}>
-        <div className="tiny" style={{ color: 'var(--ink-mute)' }}>YOUR APPOINTMENT</div>
-        <div className="h-card" style={{ marginTop: 6, fontSize: 17 }}>{service?.name}</div>
+        <div className="tiny" style={{ color: 'var(--ink-mute)' }}>YOUR REQUEST</div>
+        <div className="h-card" style={{ marginTop: 6, fontSize: 17 }}>{serviceName}</div>
         <div className="body-mute" style={{ marginTop: 2 }}>
-          {draft.date && fmtDateLong(parseYmd(draft.date))} · {draft.time}
+          Pricing will be discussed during your appointment
         </div>
         <div className="badge badge-pending" style={{ marginTop: 12 }}>Pending</div>
       </div>

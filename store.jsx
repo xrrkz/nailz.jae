@@ -7,17 +7,38 @@ const STORAGE_KEY = 'nailzjae.v5';
 // Default seed data
 // ─────────────────────────────────────────────────────────────
 const seedServices = [
-  { id: 's-short-acr',  category: 'Acrylic Full Set', length: 'Short',  name: 'Short Acrylic Set',   price: 40, durationMin: 90,  desc: 'Any shape included — almond, coffin, square, stiletto. Classic finish.', photo: '' },
-  { id: 's-med-acr',    category: 'Acrylic Full Set', length: 'Medium', name: 'Medium Acrylic Set',  price: 55, durationMin: 105, desc: 'A little extra length. Most designs included.', photo: '' },
-  { id: 's-long-acr',   category: 'Acrylic Full Set', length: 'Long',   name: 'Long Acrylic Set',    price: 65, durationMin: 120, desc: 'Statement length. Any shape, most designs.', photo: '' },
-  { id: 's-xlong-acr',  category: 'Acrylic Full Set', length: 'X-Long', name: 'X-Long Acrylic Set',  price: 75, durationMin: 135, desc: 'Drama. Maximum length, full glam.', photo: '' },
-  { id: 's-overlay',    category: 'Gel Overlay',      length: 'Natural',name: 'Gel Overlay',         price: 35, durationMin: 75,  desc: 'On natural nails. Strengthens + shines.', photo: '' },
-  { id: 's-mani',       category: 'Manicure',         length: 'Natural',name: 'Manicure',            price: 25, durationMin: 45,  desc: 'Shape, cuticle care, and polish.', photo: '' },
-  { id: 's-fill',       category: 'Refill',           length: '—',      name: 'Acrylic Refill',      price: 45, durationMin: 75,  desc: 'Within 3 weeks of original set.', photo: '' },
-  { id: 's-soak',       category: 'Add-on',           length: '—',      name: 'Soak Off',            price: 15, durationMin: 30,  desc: 'Add-on to any new set.', photo: '' },
-  { id: 's-bling',      category: 'Add-on',           length: '—',      name: 'Bling-Out / 3D / Charms', price: 15, durationMin: 30, desc: 'Premium add-on. Final price varies with detail.', photo: '' },
-  { id: 's-designs',    category: 'Add-on',           length: '—',      name: 'Custom Nail Designs', price: 10, durationMin: 20,  desc: 'Most designs included with a set — this is for extra-intricate work, per 5 nails.', photo: '' },
+  { id: 's-fullset',  category: 'Full Set',  length: '—', name: 'Full Set',  price: 0, durationMin: 120, desc: 'New acrylic full set — choose your length, shape, and design.', photo: '' },
+  { id: 's-fillin',   category: 'Fill In',   length: '—', name: 'Fill In',   price: 0, durationMin: 75,  desc: 'Acrylic fill-in — my work or foreign work.', photo: '' },
+  { id: 's-soakoff',  category: 'Soak Off',  length: '—', name: 'Soak Off',  price: 0, durationMin: 45,  desc: 'Full soak-off removal.', photo: '' },
 ];
+
+const SERVICE_BUILDER = {
+  types: [
+    { id: 'full-set',  label: 'Full Set',  hasOrigin: false, hasDesign: true },
+    { id: 'fill-in',   label: 'Fill In',   hasOrigin: true,  hasDesign: true },
+    { id: 'soak-off',  label: 'Soak Off',  hasOrigin: true,  hasDesign: false },
+  ],
+  origins: [
+    { id: 'my-work',      label: 'My Work' },
+    { id: 'foreign-work', label: 'Foreign Work' },
+  ],
+  designs: [
+    { id: 'french-tip',     label: 'French Tip' },
+    { id: 'full-paint',     label: 'Full Paint' },
+    { id: 'custom-design',  label: 'Custom Design' },
+    { id: 'jems-charms',    label: 'Jems / Charms' },
+  ],
+};
+
+function buildServiceName(type, origin, design) {
+  const t = SERVICE_BUILDER.types.find(x => x.id === type);
+  const o = SERVICE_BUILDER.origins.find(x => x.id === origin);
+  const d = SERVICE_BUILDER.designs.find(x => x.id === design);
+  let name = t?.label || '';
+  if (o) name += ' (' + o.label + ')';
+  if (d) name += ' — ' + d.label;
+  return name;
+}
 
 // payment handles (editable)
 const seedHandles = {
@@ -205,11 +226,11 @@ function bookingToRow(b, state) {
   const sv = (state || __state).services.find(s => s.id === b.serviceId);
   return {
     id:              b.id,
-    service_id:      b.serviceId,
+    service_id:      b.serviceId || null,
     service_name:    b.serviceName || sv?.name || null,
     service_price:   b.servicePrice ?? sv?.price ?? null,
-    date:            b.date,
-    time:            b.time,
+    date:            b.date || ymd(new Date()),
+    time:            b.time || 'TBD',
     name:            b.name,
     phone:           b.phone || null,
     email:           b.email || null,
@@ -398,6 +419,7 @@ function updateBooking(id, patch) {
     if (patch.status         !== undefined) row.status          = patch.status;
     if (patch.note           !== undefined) row.note            = patch.note;
     if (patch.inspirationSrc !== undefined) row.inspiration_src = patch.inspirationSrc;
+    if (patch.servicePrice   !== undefined) row.service_price   = patch.servicePrice;
     if (Object.keys(row).length === 0) return;
     window.sb.from('bookings').update(row).eq('id', id).then(({ error }) => {
       if (error) console.warn('[store] booking update failed', error);
@@ -461,4 +483,5 @@ Object.assign(window, {
   bookedTimesFor,
   lookupBookingsByContact,
   ymd, parseYmd, fmtDateLong, fmtDateShort,
+  SERVICE_BUILDER, buildServiceName,
 });
