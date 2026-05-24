@@ -114,26 +114,24 @@ function parseHash() {
   return 'home';
 }
 
-// for the Tweaks "seed sample bookings" button
 function seedSampleBookings() {
-  const state = window.useStore ? null : null;
-  // pick first open day + a slot
-  const av = JSON.parse(localStorage.getItem('nailzjae.v1') || '{}').availability || {};
-  const keys = Object.keys(av).filter(k => av[k].open && av[k].slots.length > 0).slice(0, 3);
   const samples = [
-    { name: 'Alex Rivera', phone: '(555) 0148-2102', email: 'alex@gmail.com', social: '@alex.r',  payment: 'venmo',  status: 'pending'   },
-    { name: 'Mia Chen',    phone: '(555) 0192-4480', email: 'mia@gmail.com',  social: '@miii.c',  payment: 'zelle',  status: 'confirmed' },
-    { name: 'Jordan Park', phone: '(555) 0177-1029', email: 'jordan@me.com',  social: '@jdnprk',  payment: 'paypal', status: 'pending'   },
+    { name: 'Alex Rivera', phone: '(555) 0148-2102', email: 'alex@gmail.com', social: '@alex.r',  payment: 'venmo',  status: 'pending',   serviceName: 'Full Set — French Tip' },
+    { name: 'Mia Chen',    phone: '(555) 0192-4480', email: 'mia@gmail.com',  social: '@miii.c',  payment: 'zelle',  status: 'confirmed', serviceName: 'Fill In (My Work) — Custom Design' },
+    { name: 'Jordan Park', phone: '(555) 0177-1029', email: 'jordan@me.com',  social: '@jdnprk',  payment: 'paypal', status: 'pending',   serviceName: 'Soak Off (Foreign Work)' },
   ];
-  keys.forEach((k, i) => {
-    const sample = samples[i];
-    if (!sample) return;
-    const slot = av[k].slots[1] || av[k].slots[0];
+  samples.forEach(sample => {
     const b = window.addBooking({
-      serviceId: 's-med-acr',
-      date: k,
-      time: slot,
-      ...sample,
+      serviceId: null,
+      serviceName: sample.serviceName,
+      servicePrice: null,
+      date: null,
+      time: null,
+      name: sample.name,
+      phone: sample.phone,
+      email: sample.email,
+      social: sample.social,
+      payment: sample.payment,
     });
     if (sample.status === 'confirmed') {
       window.updateBooking(b.id, { status: 'confirmed' });

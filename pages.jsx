@@ -140,28 +140,64 @@ function HomePage({ go }) {
           </button>
         </div>
         <div className="stack">
-          {state.services.slice(0, 3).map(sv => (
-            <button key={sv.id} className="card" onClick={() => go('book', { serviceId: sv.id })} style={{ width: '100%', textAlign: 'left' }}>
+          {SERVICE_BUILDER.types.map(t => (
+            <button key={t.id} className="card" onClick={() => go('book')} style={{ width: '100%', textAlign: 'left' }}>
               <div className="row-between">
                 <div className="grow">
-                  <div className="tiny" style={{ color: 'var(--rose-deep)' }}>{sv.category} · {sv.length}</div>
-                  <div className="h-card" style={{ marginTop: 4 }}>{sv.name}</div>
-                  <div className="body-mute" style={{ marginTop: 4 }}>{sv.desc}</div>
+                  <div className="h-card" style={{ marginTop: 4, fontSize: 18 }}>{t.label}</div>
+                  <div className="body-mute" style={{ marginTop: 4 }}>
+                    {t.id === 'full-set' && 'French tip, full paint, custom design, or jems/charms'}
+                    {t.id === 'fill-in' && 'My work or foreign work — with design options'}
+                    {t.id === 'soak-off' && 'My work or foreign work'}
+                  </div>
                 </div>
-                <PriceTag amount={sv.price}/>
+                <Icon.arrow size={16}/>
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Policy footer-y bit */}
+      {/* Pricing info */}
       <div style={{ padding: '36px 24px 12px' }}>
         <div className="card" style={{ background: 'rgba(201, 142, 142, 0.08)', border: '1px solid rgba(201, 142, 142, 0.22)' }}>
-          <div className="h-eyebrow" style={{ marginBottom: 8 }}>good to know</div>
-          <p className="body-mute" style={{ margin: 0 }}>
-            Any shape and most designs come <b style={{ color: 'var(--espresso)' }}>included</b> with your set.
-            {' '}<b style={{ color: 'var(--espresso)' }}>3D nails, diamonds / rhinestones, and charms</b> are an add-on — final price varies with the detail.
+          <div className="h-eyebrow" style={{ marginBottom: 10 }}>pricing guide</div>
+
+          <div className="tiny" style={{ color: 'var(--rose-deep)', letterSpacing: '0.14em', marginBottom: 6 }}>LENGTH</div>
+          <div className="body-mute" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>0–2 (Short)</span><b style={{ color: 'var(--espresso)' }}>$55</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>3–4 (Medium)</span><b style={{ color: 'var(--espresso)' }}>$60</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>5–7 (Long)</span><b style={{ color: 'var(--espresso)' }}>$65</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>8–10 (X-Long)</span><b style={{ color: 'var(--espresso)' }}>$70</b></div>
+          </div>
+
+          <div style={{ height: 1, background: 'var(--line)', margin: '12px 0' }}/>
+
+          <div className="tiny" style={{ color: 'var(--rose-deep)', letterSpacing: '0.14em', marginBottom: 6 }}>SHAPE (BOTH HANDS)</div>
+          <div className="body-mute" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Square</span><b style={{ color: 'var(--espresso)' }}>$0</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tapered Square</span><b style={{ color: 'var(--espresso)' }}>+$2</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Coffin</span><b style={{ color: 'var(--espresso)' }}>+$3</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Lipstick</span><b style={{ color: 'var(--espresso)' }}>+$2</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Stiletto</span><b style={{ color: 'var(--espresso)' }}>+$4</b></div>
+          </div>
+
+          <div style={{ height: 1, background: 'var(--line)', margin: '12px 0' }}/>
+
+          <div className="tiny" style={{ color: 'var(--rose-deep)', letterSpacing: '0.14em', marginBottom: 6 }}>DESIGNS</div>
+          <div className="body-mute" style={{ fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Polish & french tip / easy designs</span><b style={{ color: 'var(--espresso)' }}>$0</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Bling (5–10+ gems)</span><b style={{ color: 'var(--espresso)' }}>+$4</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>More than 2 charms</span><b style={{ color: 'var(--espresso)' }}>+$1</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Glitter</span><b style={{ color: 'var(--espresso)' }}>+$1</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Cateye</span><b style={{ color: 'var(--espresso)' }}>+$2</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>3D art</span><b style={{ color: 'var(--espresso)' }}>+$1</b></div>
+          </div>
+
+          <div style={{ height: 1, background: 'var(--line)', margin: '12px 0' }}/>
+
+          <p className="body-mute" style={{ margin: 0, fontSize: 12, fontStyle: 'italic' }}>
+            All final pricing will be discussed during appt aside from ${state.settings.depositAmount} no-show deposit.
           </p>
         </div>
       </div>
@@ -170,7 +206,7 @@ function HomePage({ go }) {
         <div className="card" style={{ background: 'transparent', borderStyle: 'dashed' }}>
           <div className="h-eyebrow" style={{ marginBottom: 8 }}>before booking</div>
           <p className="body-mute" style={{ margin: 0 }}>
-            A <b style={{ color: 'var(--espresso)' }}>${state.settings.depositAmount} deposit</b> is required to secure your appointment. It goes toward the total. Deposits are non-refundable.
+            A <b style={{ color: 'var(--espresso)' }}>${state.settings.depositAmount} no-show deposit</b> is required to secure your appointment. Deposits are non-refundable.
           </p>
         </div>
       </div>
@@ -369,54 +405,95 @@ function Lightbox({ items, index, onChange, onClose, onBook }) {
 // ─────────────────────────────────────────────────────────────
 function ServicesPage({ go }) {
   const [state] = useStore();
-  const [filter, setFilter] = React.useState('All');
-  const categories = ['All', ...Array.from(new Set(state.services.map(s => s.category)))];
 
-  const filtered = filter === 'All' ? state.services : state.services.filter(s => s.category === filter);
+  const serviceDescriptions = {
+    'full-set': {
+      desc: 'New acrylic full set — choose your length, shape, and design.',
+      options: SERVICE_BUILDER.designs.map(d => d.label),
+    },
+    'fill-in': {
+      desc: 'Acrylic fill-in — my work or foreign work.',
+      options: [...SERVICE_BUILDER.origins.map(o => o.label), ...SERVICE_BUILDER.designs.map(d => d.label)],
+    },
+    'soak-off': {
+      desc: 'Full soak-off removal.',
+      options: SERVICE_BUILDER.origins.map(o => o.label),
+    },
+  };
 
   return (
     <div className="scroll page-enter">
       <div className="safe-top"></div>
       <div style={{ padding: '20px 24px 14px' }}>
         <div className="h-eyebrow">menu</div>
-        <div className="h-display" style={{ fontSize: 44, marginTop: 6 }}>Services<br/>& Pricing</div>
+        <div className="h-display" style={{ fontSize: 44, marginTop: 6 }}>Build<br/>Your Set</div>
         <p className="body-mute" style={{ marginTop: 12 }}>
-          All sets include shaping, cuticle care, and a top-coat finish. A ${state.settings.depositAmount} deposit goes toward your total.
+          All sets include shaping, cuticle care, and a top-coat finish. All final pricing will be discussed during your appointment.
         </p>
-
-        <div style={{ display: 'flex', gap: 6, marginTop: 18, overflowX: 'auto', margin: '18px -24px 0', padding: '0 24px', scrollbarWidth: 'none' }}>
-          {categories.map(c => (
-            <button key={c} className={'chip' + (filter === c ? ' is-active' : '')} onClick={() => setFilter(c)} style={{ flex: '0 0 auto' }}>
-              {c}
-            </button>
-          ))}
-        </div>
       </div>
 
-      <div key={filter} style={{ padding: '14px 24px 24px' }} className="stack stagger">
-        {filtered.map(sv => (
-          <div key={sv.id} className="card" style={{ display: 'flex', gap: 14, alignItems: 'flex-start', padding: 14 }}>
-            {sv.photo ? (
-              <div style={{ flex: '0 0 88px' }}>
-                <img src={sv.photo} alt="" loading="lazy" style={{ width: 88, height: 110, objectFit: 'cover', borderRadius: 10, display: 'block', animation: 'fade-up 420ms var(--ease) both' }}/>
+      <div style={{ padding: '14px 24px 0' }} className="stack stagger">
+        {SERVICE_BUILDER.types.map(t => {
+          const info = serviceDescriptions[t.id];
+          return (
+            <div key={t.id} className="card" style={{ padding: 16 }}>
+              <div className="h-card" style={{ fontSize: 20 }}>{t.label}</div>
+              <div className="body-mute" style={{ marginTop: 4, fontSize: 13 }}>{info.desc}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+                {info.options.map(opt => (
+                  <span key={opt} className="chip" style={{ fontSize: 12 }}>{opt}</span>
+                ))}
               </div>
-            ) : null}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="tiny" style={{ color: 'var(--rose-deep)' }}>{sv.category} · {sv.length}</div>
-              <div className="h-card" style={{ marginTop: 4, fontSize: 18 }}>{sv.name}</div>
-              <div className="body-mute" style={{ marginTop: 4, fontSize: 13 }}>{sv.desc}</div>
-              <div className="row-between" style={{ marginTop: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <PriceTag amount={sv.price} size={20}/>
-                  <span className="tiny" style={{ color: 'var(--ink-faint)' }}>· {sv.durationMin}m</span>
-                </div>
-                <button className="copy-btn" onClick={() => go('book', { serviceId: sv.id })} style={{ textTransform: 'none', letterSpacing: '0.04em' }}>
-                  Book
-                </button>
-              </div>
+              <button className="btn btn-primary btn-block" onClick={() => go('book')} style={{ marginTop: 14 }}>
+                Book {t.label} <Icon.arrow/>
+              </button>
             </div>
+          );
+        })}
+      </div>
+
+      {/* Pricing guide */}
+      <div style={{ padding: '28px 24px 12px' }}>
+        <div className="card" style={{ background: 'rgba(201, 142, 142, 0.08)', border: '1px solid rgba(201, 142, 142, 0.22)' }}>
+          <div className="h-eyebrow" style={{ marginBottom: 10 }}>pricing guide</div>
+
+          <div className="tiny" style={{ color: 'var(--rose-deep)', letterSpacing: '0.14em', marginBottom: 6 }}>LENGTH</div>
+          <div className="body-mute" style={{ fontSize: 13, lineHeight: 1.7 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>0–2 (Short)</span><b style={{ color: 'var(--espresso)' }}>$55</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>3–4 (Medium)</span><b style={{ color: 'var(--espresso)' }}>$60</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>5–7 (Long)</span><b style={{ color: 'var(--espresso)' }}>$65</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>8–10 (X-Long)</span><b style={{ color: 'var(--espresso)' }}>$70</b></div>
           </div>
-        ))}
+
+          <div style={{ height: 1, background: 'var(--line)', margin: '12px 0' }}/>
+
+          <div className="tiny" style={{ color: 'var(--rose-deep)', letterSpacing: '0.14em', marginBottom: 6 }}>SHAPE (BOTH HANDS)</div>
+          <div className="body-mute" style={{ fontSize: 13, lineHeight: 1.7 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Square</span><b style={{ color: 'var(--espresso)' }}>$0</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tapered Square</span><b style={{ color: 'var(--espresso)' }}>+$2</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Coffin</span><b style={{ color: 'var(--espresso)' }}>+$3</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Lipstick</span><b style={{ color: 'var(--espresso)' }}>+$2</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Stiletto</span><b style={{ color: 'var(--espresso)' }}>+$4</b></div>
+          </div>
+
+          <div style={{ height: 1, background: 'var(--line)', margin: '12px 0' }}/>
+
+          <div className="tiny" style={{ color: 'var(--rose-deep)', letterSpacing: '0.14em', marginBottom: 6 }}>DESIGNS</div>
+          <div className="body-mute" style={{ fontSize: 13, lineHeight: 1.7 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Polish & french tip / easy designs</span><b style={{ color: 'var(--espresso)' }}>$0</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Bling (5–10+ gems)</span><b style={{ color: 'var(--espresso)' }}>+$4</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>More than 2 charms</span><b style={{ color: 'var(--espresso)' }}>+$1</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Glitter</span><b style={{ color: 'var(--espresso)' }}>+$1</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Cateye</span><b style={{ color: 'var(--espresso)' }}>+$2</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>3D art</span><b style={{ color: 'var(--espresso)' }}>+$1</b></div>
+          </div>
+
+          <div style={{ height: 1, background: 'var(--line)', margin: '12px 0' }}/>
+
+          <p className="body-mute" style={{ margin: 0, fontSize: 12, fontStyle: 'italic' }}>
+            All final pricing will be discussed during appt aside from ${state.settings.depositAmount} no-show deposit.
+          </p>
+        </div>
       </div>
 
       <div style={{ height: 110 }}/>
@@ -535,8 +612,16 @@ function MyAppointmentsPage({ go }) {
   }
 
   const today = ymd(new Date());
-  const upcoming = (results || []).filter(b => b.date >= today && b.status !== 'denied');
-  const past     = (results || []).filter(b => b.date <  today || b.status === 'denied');
+  const upcoming = (results || []).filter(b => {
+    if (b.status === 'denied') return false;
+    if (!b.date || b.time === 'TBD') return b.status !== 'denied';
+    return b.date >= today;
+  });
+  const past = (results || []).filter(b => {
+    if (b.status === 'denied') return true;
+    if (!b.date || b.time === 'TBD') return false;
+    return b.date < today;
+  });
 
   return (
     <div className="scroll page-enter">
@@ -637,16 +722,17 @@ function ApptCard({ b, muted }) {
   const badgeCls = b.status === 'confirmed' ? 'badge badge-confirmed'
                  : b.status === 'denied'    ? 'badge badge-denied'
                  : 'badge badge-pending';
+  const hasDate = b.date && b.time && b.time !== 'TBD';
   return (
     <div className="card" style={{ opacity: muted ? 0.72 : 1 }}>
       <div className="row-between" style={{ alignItems: 'flex-start' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="tiny" style={{ color: 'var(--rose-deep)' }}>{b.serviceName || 'Appointment'}</div>
           <div className="h-card" style={{ marginTop: 4, fontSize: 17 }}>
-            {fmtDateLong(parseYmd(b.date))}
+            {hasDate ? fmtDateLong(parseYmd(b.date)) : 'Submitted ' + new Date(b.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </div>
           <div className="body-mute" style={{ marginTop: 2, fontSize: 13 }}>
-            {b.time}{b.servicePrice ? ' · $' + b.servicePrice : ''}
+            {hasDate ? b.time : ''}{b.servicePrice ? (hasDate ? ' · ' : '') + '$' + b.servicePrice : ''}
           </div>
           {b.note && (
             <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(20,16,12,.04)', borderRadius: 8, fontSize: 12, color: 'var(--ink-mute)' }}>

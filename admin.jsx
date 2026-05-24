@@ -189,6 +189,8 @@ function AppointmentCard({ booking, state }) {
   const sv = state.services.find(s => s.id === booking.serviceId);
   const handle = state.handles[booking.payment];
   const [igCopied, setIgCopied] = React.useState(false);
+  const [setPrice, setSetPrice] = React.useState('');
+  const [showPriceInput, setShowPriceInput] = React.useState(false);
   const statusLabel = booking.status === 'confirmed' ? 'confirmed' : booking.status === 'denied' ? 'denied' : 'needs review';
   const badgeClass =
     booking.status === 'confirmed' ? 'badge-confirmed' :
@@ -198,61 +200,55 @@ function AppointmentCard({ booking, state }) {
   const phoneDigits = (booking.phone || '').replace(/[^0-9+]/g, '');
   const igHandle = (booking.social || '').replace(/^@/, '').trim();
 
-  // pre-filled message templates — Jae just clicks send.
-  // Different content per channel + per status, so the body is
-  // useful out of the box but easy to edit.
   const firstName = (booking.name?.split(' ')[0]) || 'there';
-  const dateLong  = fmtDateLong(parseYmd(booking.date));
-  const dateShort = fmtDateShort(parseYmd(booking.date));
-  const svcName   = sv?.name || 'your appointment';
+  const svcName   = booking.serviceName || sv?.name || 'your appointment';
   const dep       = state.settings?.depositAmount ?? 15;
-  const remaining = sv?.price != null ? Math.max(0, sv.price - dep) : null;
+  const hasDate   = booking.date && booking.time && booking.time !== 'TBD';
+  const dateLong  = hasDate ? fmtDateLong(parseYmd(booking.date)) : '';
+  const dateShort = hasDate ? fmtDateShort(parseYmd(booking.date)) : '';
+  const priceDisplay = booking.servicePrice != null ? '$' + booking.servicePrice : null;
 
   const smsBody = (() => {
     if (booking.status === 'confirmed') {
-      return `Hi ${firstName}! It's Jae — just confirming your ${svcName} on ${dateShort} at ${booking.time}. ` +
-             (remaining != null ? `Remaining balance is $${remaining} due at the appt. ` : '') +
-             `Can't wait to see you! Reply here if you need to reschedule.`;
+      return `Hi ${firstName}! It's Jae — just confirming your ${svcName}. ` +
+             (priceDisplay ? `Total is ${priceDisplay}. ` : '') +
+             `Can't wait to see you! Reply here if you have any questions.`;
     }
     if (booking.status === 'denied') {
-      return `Hi ${firstName}, it's Jae — unfortunately I can't fit your ${svcName} on ${dateShort} at ${booking.time}. ` +
-             `Let me know if you'd like to pick another day and I'll get you locked in.`;
+      return `Hi ${firstName}, it's Jae — unfortunately I can't take on your ${svcName} request right now. ` +
+             `Let me know if you'd like to try a different service or time!`;
     }
-    return `Hi ${firstName}! It's Jae — I got your booking for a ${svcName} on ${dateShort} at ${booking.time}. ` +
-           `Just confirming I received your $${dep} deposit — once I do, your slot is locked in. Let me know if you have any questions!`;
+    return `Hi ${firstName}! It's Jae — I got your request for a ${svcName}. ` +
+           `Just confirming I received your $${dep} deposit — I'll review and get back to you shortly!`;
   })();
 
   const emailSubject = booking.status === 'confirmed'
-    ? `Your nailz.jae appointment — ${dateShort} at ${booking.time}`
+    ? `Your nailz.jae appointment — ${svcName}`
     : booking.status === 'denied'
-      ? `About your nailz.jae booking — ${dateShort}`
-      : `Confirming your nailz.jae booking — ${dateShort} at ${booking.time}`;
+      ? `About your nailz.jae request`
+      : `Got your nailz.jae request — ${svcName}`;
 
   const emailBody = (() => {
     const lines = [`Hi ${firstName},`, ''];
     if (booking.status === 'confirmed') {
       lines.push(`Just confirming your appointment with me:`);
     } else if (booking.status === 'denied') {
-      lines.push(`Unfortunately I'm not able to fit your booking in on this date:`);
+      lines.push(`Unfortunately I'm not able to take on this request right now:`);
     } else {
       lines.push(`Thanks for booking with me! Here are your details:`);
     }
     lines.push('');
     lines.push(`Service:  ${svcName}`);
-    lines.push(`Date:     ${dateLong}`);
-    lines.push(`Time:     ${booking.time}`);
-    if (sv?.price != null) {
-      lines.push(`Total:    $${sv.price}  (Deposit $${dep}${remaining != null ? `, $${remaining} due at appt` : ''})`);
-    }
-    if (booking.payment) lines.push(`Deposit:  via ${booking.payment}`);
+    if (priceDisplay) lines.push(`Total:    ${priceDisplay}`);
+    if (booking.payment) lines.push(`Deposit:  $${dep} via ${booking.payment}`);
     if (booking.note)    { lines.push(''); lines.push(`Your note: "${booking.note}"`); }
     lines.push('');
     if (booking.status === 'confirmed') {
-      lines.push(`Your slot is locked in — can't wait to see you! If anything changes, just reply to this email or DM me on IG (@nailz.jae).`);
+      lines.push(`You're all set — can't wait to see you! If anything changes, just reply to this email or DM me on IG (@nailz.jae).`);
     } else if (booking.status === 'denied') {
-      lines.push(`Let me know if you'd like to pick another day and I'll get you locked in.`);
+      lines.push(`Let me know if you'd like to try something else and I'll get you taken care of.`);
     } else {
-      lines.push(`I'll confirm your deposit and lock in your slot within a few hours. Reply here or DM @nailz.jae if you have any questions.`);
+      lines.push(`I'll review your request and get back to you shortly. Reply here or DM @nailz.jae if you have any questions.`);
     }
     lines.push('');
     lines.push(`— Jaelyn`);
@@ -261,20 +257,37 @@ function AppointmentCard({ booking, state }) {
   })();
 
   const igBody = booking.status === 'confirmed'
-    ? `hey ${firstName}! confirming your ${svcName} ${dateShort} @ ${booking.time} — can't wait!`
+    ? `hey ${firstName}! confirming your ${svcName} — can't wait!${priceDisplay ? ' total is ' + priceDisplay : ''}`
     : booking.status === 'denied'
-      ? `hi ${firstName}, sadly can't fit ${dateShort} @ ${booking.time} — wanna pick another day?`
-      : `hey ${firstName}! got your booking for ${svcName} ${dateShort} @ ${booking.time} — confirming deposit now`;
+      ? `hi ${firstName}, sadly can't take on your ${svcName} request rn — wanna try something else?`
+      : `hey ${firstName}! got your request for ${svcName} — reviewing now`;
+
+  function confirmWithPrice() {
+    const price = setPrice ? +setPrice : null;
+    const patch = { status: 'confirmed' };
+    if (price != null && price > 0) patch.servicePrice = price;
+    updateBooking(booking.id, patch);
+    setShowPriceInput(false);
+  }
 
   return (
     <div className="admin-card">
       <div className="row-between">
         <div>
-          <div className="tiny" style={{ color: 'var(--ink-mute)' }}>{fmtDateLong(parseYmd(booking.date))}</div>
-          <div className="h-card" style={{ marginTop: 4, fontSize: 17 }}>{booking.time} · {sv?.name}</div>
+          <div className="tiny" style={{ color: 'var(--ink-mute)' }}>
+            {hasDate ? fmtDateLong(parseYmd(booking.date)) : 'Submitted ' + new Date(booking.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </div>
+          <div className="h-card" style={{ marginTop: 4, fontSize: 17 }}>{svcName}</div>
         </div>
         <span className={'badge ' + badgeClass}>{statusLabel}</span>
       </div>
+
+      {priceDisplay && (
+        <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(201, 142, 142, 0.08)', borderRadius: 8, display: 'inline-block' }}>
+          <span className="tiny" style={{ color: 'var(--rose-deep)', letterSpacing: '0.14em' }}>PRICE SET: </span>
+          <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--espresso)', fontWeight: 600 }}>{priceDisplay}</span>
+        </div>
+      )}
 
       <div style={{ height: 1, background: 'var(--line)', margin: '12px 0' }}/>
 
@@ -296,7 +309,6 @@ function AppointmentCard({ booking, state }) {
         <div className="row-between"><span className="body-mute">Deposit via</span><span>{handle?.display || booking.payment}</span></div>
       </div>
 
-      {/* quick message buttons — body pre-filled with appt details */}
       {(phoneDigits || booking.email || igHandle) && (
         <div className="contact-row">
           {phoneDigits && (
@@ -367,44 +379,77 @@ function AppointmentCard({ booking, state }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-        {booking.status === 'pending' && (
-          <>
-            <button className="btn btn-rose btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => updateBooking(booking.id, { status: 'confirmed' })}>
+      {/* Price input for confirm */}
+      {showPriceInput && (
+        <div style={{ marginTop: 12, padding: 12, background: 'rgba(201, 142, 142, 0.08)', borderRadius: 10, border: '1px solid rgba(201, 142, 142, 0.22)' }}>
+          <div className="tiny" style={{ color: 'var(--rose-deep)', letterSpacing: '0.14em', marginBottom: 8 }}>SET PRICE FOR THIS APPOINTMENT</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 18, fontWeight: 600, color: 'var(--espresso)' }}>$</span>
+            <input
+              className="input"
+              type="number"
+              value={setPrice}
+              onChange={e => setSetPrice(e.target.value)}
+              placeholder="0"
+              style={{ flex: 1, fontSize: 18, padding: '10px 12px' }}
+              autoFocus
+            />
+          </div>
+          <div className="body-mute" style={{ fontSize: 11, marginTop: 6 }}>Leave blank to confirm without a set price.</div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button className="btn btn-rose btn-sm" style={{ flex: 1 }} onClick={confirmWithPrice}>
               <Icon.check size={16}/> Confirm
             </button>
-            <button className="btn btn-ghost btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => {
-              if (confirm('Deny this booking? The slot will be released.')) updateBooking(booking.id, { status: 'denied' });
-            }}>
-              <Icon.close size={14}/> Deny
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowPriceInput(false)}>
+              Cancel
             </button>
-          </>
-        )}
-        {booking.status === 'confirmed' && (
-          <>
-            <button className="btn btn-ghost btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => updateBooking(booking.id, { status: 'pending' })}>
-              Move back to pending
-            </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => {
-              if (confirm('Delete this booking?')) removeBooking(booking.id);
-            }} aria-label="Delete">
-              <Icon.trash size={14}/>
-            </button>
-          </>
-        )}
-        {booking.status === 'denied' && (
-          <>
-            <button className="btn btn-ghost btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => updateBooking(booking.id, { status: 'pending' })}>
-              Restore to pending
-            </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => {
-              if (confirm('Delete this booking permanently?')) removeBooking(booking.id);
-            }} aria-label="Delete">
-              <Icon.trash size={14}/>
-            </button>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
+
+      {!showPriceInput && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+          {booking.status === 'pending' && (
+            <>
+              <button className="btn btn-rose btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => setShowPriceInput(true)}>
+                <Icon.check size={16}/> Confirm
+              </button>
+              <button className="btn btn-ghost btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => {
+                if (confirm('Deny this request?')) updateBooking(booking.id, { status: 'denied' });
+              }}>
+                <Icon.close size={14}/> Deny
+              </button>
+            </>
+          )}
+          {booking.status === 'confirmed' && (
+            <>
+              <button className="btn btn-ghost btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => updateBooking(booking.id, { status: 'pending' })}>
+                Move back to pending
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowPriceInput(true)}>
+                Set price
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => {
+                if (confirm('Delete this booking?')) removeBooking(booking.id);
+              }} aria-label="Delete">
+                <Icon.trash size={14}/>
+              </button>
+            </>
+          )}
+          {booking.status === 'denied' && (
+            <>
+              <button className="btn btn-ghost btn-sm" style={{ flex: 1, minWidth: 0 }} onClick={() => updateBooking(booking.id, { status: 'pending' })}>
+                Restore to pending
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => {
+                if (confirm('Delete this booking permanently?')) removeBooking(booking.id);
+              }} aria-label="Delete">
+                <Icon.trash size={14}/>
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
