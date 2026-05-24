@@ -4,11 +4,12 @@ const STEPS = ['Build Your Set', 'Notes', 'Your Info', 'Deposit', 'Done'];
 
 function BookingFlow({ initial, onExit }) {
   const [state] = useStore();
-  const [step, setStep] = React.useState(0);
+  const skipBuild = !!initial?.serviceType;
+  const [step, setStep] = React.useState(skipBuild ? 1 : 0);
   const [direction, setDirection] = React.useState('fwd');
   const scrollRef = React.useRef(null);
   const [draft, setDraft] = React.useState({
-    serviceType: null,
+    serviceType: initial?.serviceType || null,
     serviceOrigin: null,
     serviceDesign: null,
     name: '',
@@ -34,7 +35,7 @@ function BookingFlow({ initial, onExit }) {
 
   function next() { setDirection('fwd'); setStep(s => Math.min(s + 1, STEPS.length - 1)); }
   function back() {
-    if (step === 0) onExit();
+    if (step === 0 || (skipBuild && step === 1)) onExit();
     else { setDirection('back'); setStep(s => s - 1); }
   }
 
@@ -84,14 +85,22 @@ function BookingFlow({ initial, onExit }) {
 
       {/* stepper */}
       <div style={{ padding: '0 24px 6px' }}>
-        <div className="stepper">
-          {STEPS.map((_, i) => (
-            <div key={i} className={'dot' + (i < step ? ' is-done' : '') + (i === step ? ' is-active' : '')}/>
-          ))}
-        </div>
-        <div className="tiny" style={{ marginTop: 8, color: 'var(--ink-mute)', letterSpacing: '0.14em' }}>
-          STEP {step + 1} / {STEPS.length} · {STEPS[step]}
-        </div>
+        {(() => {
+          const visibleSteps = skipBuild ? STEPS.slice(1) : STEPS;
+          const visibleIndex = skipBuild ? step - 1 : step;
+          return (
+            <>
+              <div className="stepper">
+                {visibleSteps.map((_, i) => (
+                  <div key={i} className={'dot' + (i < visibleIndex ? ' is-done' : '') + (i === visibleIndex ? ' is-active' : '')}/>
+                ))}
+              </div>
+              <div className="tiny" style={{ marginTop: 8, color: 'var(--ink-mute)', letterSpacing: '0.14em' }}>
+                STEP {visibleIndex + 1} / {visibleSteps.length} · {visibleSteps[visibleIndex]}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       <div key={step} className={'step-pane step-' + direction} style={{ padding: '14px 24px 24px' }}>
